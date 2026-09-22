@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>剪巢智能填充 · 测试表单</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #fce7f3 0%, #ede9fe 46%, #f5f0ff 74%, #fdf2f8 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    color: #1f2329;
+  }
+  .wrap { width: 560px; }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(114, 108, 255, 0.1);
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 20px; margin-bottom: 6px; }
+  .brand { color: #726cff; }
+  h2 { font-size: 15px; margin: 26px 0 4px; }
+  .hint { font-size: 12px; color: #999; margin-bottom: 10px; line-height: 1.6; }
+  .row { margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+  input, textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    background: #fafafa;
+  }
+  input:focus, textarea:focus { border-color: #726cff; box-shadow: 0 0 0 3px rgba(114,108,255,.12); background: #fff; }
+  textarea { min-height: 72px; resize: vertical; }
+  .pwd-note { font-size: 11px; color: #e5484d; margin-top: 4px; }
+  .filled-badge {
+    display: none;
+    font-size: 11px; color: #726cff; margin-top: 4px;
+  }
+  .row.filled .filled-badge { display: block; }
+  button.submit {
+    background: #726cff; color: #fff; border: none; border-radius: 999px;
+    padding: 10px 28px; font-size: 14px; cursor: pointer; margin-top: 6px;
+  }
+  button.submit:hover { filter: brightness(1.08); }
+  #out { font-size: 12px; color: #726cff; margin-top: 10px; min-height: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>剪巢 <span class="brand">智能填充</span> · 测试表单</h1>
+  </div>
+
+  <form class="card" id="form">
+    <h2>求职申请表（示例）</h2>
+
+    <div class="row">
+      <label for="fullname">姓名</label>
+      <input id="fullname" name="fullname" type="text" placeholder="你的姓名" autocomplete="off" />
+    </div>
+
+    <div class="row" data-row="email">
+      <label for="email">邮箱地址</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="off" />
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="phone">手机号码</label>
+      <input id="phone" name="phone" type="tel" placeholder="139 **** 5678" autocomplete="off" />
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="website">个人主页（网址）</label>
+      <input id="website" name="website" type="url" placeholder="https://…" autocomplete="off" />
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="company">所在公司</label>
+      <input id="company" name="company" type="text" placeholder="公司或团队名称" autocomplete="off" />
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="intro">自我介绍</label>
+      <textarea id="intro" name="intro" placeholder="简单介绍一下自己…"></textarea>
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="email-en">Email address（英文标签，测试双语识别）</label>
+      <input id="email-en" name="email_en" type="email" placeholder="you@example.com" autocomplete="off" />
+      <div class="filled-badge">剪巢已填充 ✓</div>
+    </div>
+
+    <div class="row">
+      <label for="pwd">密码</label>
+      <input id="pwd" name="password" type="password" placeholder="••••••••" autocomplete="new-password" />
+      <div class="pwd-note">安全规则：剪巢永远不读取、不填充密码字段</div>
+    </div>
+
+    <button class="submit" type="button" id="show">查看当前填写内容</button>
+    <div id="out"></div>
+  </form>
+
+  <div class="card">
+    <h2>搜索框（应识别为 search）</h2>
+    <div class="row">
+      <label for="q">站内搜索</label>
+      <input id="q" name="q" type="search" placeholder="搜索…" autocomplete="off" />
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('form').addEventListener('submit', e => e.preventDefault())
+                            
+  document.querySelectorAll('.row input, .row textarea').forEach(el => {
+    el.addEventListener('input', () => {
+      const row = el.closest('.row')
+      if (row && el.value && el.type !== 'password' && el.id !== 'q') row.classList.add('filled')
+    })
+  })
+  document.getElementById('show').addEventListener('click', () => {
+    const parts = []
+    document.querySelectorAll('.card input, .card textarea').forEach(el => {
+      if (el.type === 'password' || !el.id || el.value === '') return
+      parts.push(el.id + ' = ' + el.value)
+    })
+    document.getElementById('out').textContent = parts.join('  |  ') || '（空）'
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+.venv/
+audition-*.wav
+.hyperframes/
+snapshots/
+renders/*.mp4

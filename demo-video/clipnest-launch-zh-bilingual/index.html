@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080">
+    <title>剪巢 · 中文配音双语字幕演示</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; margin: 0; overflow: hidden; background: #F5F4FA; font-family: "Segoe UI", sans-serif; }
+      #clipnest-launch { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #F5F4FA; }
+      .clip { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .transition-clip { z-index: 20; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-7f0d" id="clipnest-launch-zh-bilingual" data-composition-id="clipnest-launch-zh-bilingual" data-start="0" data-duration="36.4" data-width="1920" data-height="1080">
+      <div data-hf-id="hf-tewa" id="scene-1" class="clip" data-composition-id="beat-1-hook" data-composition-src="compositions/beat-1-hook.html" data-start="0" data-duration="3.2" data-track-index="1"></div>
+      <div data-hf-id="hf-dxrw" id="scene-2" class="clip" data-composition-id="beat-2-nest" data-composition-src="compositions/beat-2-nest.html" data-start="3.2" data-duration="3.0" data-track-index="1"></div>
+      <div data-hf-id="hf-w6c5" id="scene-3" class="clip" data-composition-id="beat-3-real-form" data-composition-src="compositions/beat-3-real-form.html" data-start="6.2" data-duration="7" data-track-index="1"></div>
+      <div data-hf-id="hf-93q0" id="scene-4" class="clip" data-composition-id="beat-4-web-tour" data-composition-src="compositions/beat-4-web-tour.html" data-start="13.2" data-duration="13.84" data-track-index="1"></div>
+      <div data-hf-id="hf-pjk5" id="scene-5" class="clip" data-composition-id="beat-5-private" data-composition-src="compositions/beat-5-private.html" data-start="27.04" data-duration="3.16" data-track-index="1"></div>
+      <div data-hf-id="hf-bcq8" id="scene-6" class="clip" data-composition-id="beat-6-outro" data-composition-src="compositions/beat-6-outro.html" data-start="30.2" data-duration="6.2" data-track-index="1"></div>
+      <div data-hf-id="hf-edf5" id="transition-layer" class="clip transition-clip" data-composition-id="transitions" data-composition-src="compositions/transitions.html" data-start="0" data-duration="36.4" data-track-index="4"></div>
+      <div data-hf-id="hf-captions" id="bilingual-captions" class="clip" data-composition-id="bilingual-captions" data-composition-src="compositions/bilingual-captions.html" data-start="0" data-duration="36.4" data-track-index="6"></div>
+      <audio data-hf-id="hf-19pb" id="narration" src="narration-master.wav" data-start="0.4" data-duration="30.72" data-track-index="10" data-volume="1"></audio>
+      <audio data-hf-id="hf-8v7f" id="underscore" src="underscore-bilingual.wav" data-start="0" data-duration="36.4" data-track-index="11" data-volume="0.16"></audio>
+      <audio data-hf-id="hf-uvsg" id="opening-chime" src="sfx-chime.wav" data-start="0.18" data-duration="1.2" data-track-index="12" data-volume="0.32"></audio>
+      <audio data-hf-id="hf-ke8x" id="fill-whoosh" src="sfx-whoosh.wav" data-start="5.88" data-duration="0.75" data-track-index="12" data-volume="0.24"></audio>
+      <audio data-hf-id="hf-tmfx" id="analytics-click" src="sfx-click.wav" data-start="10.82" data-duration="0.18" data-track-index="12" data-volume="0.28"></audio>
+      <audio data-hf-id="hf-jokk" id="privacy-chime" src="sfx-chime.wav" data-start="29.92" data-duration="1.2" data-track-index="13" data-volume="0.28"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const mainTimeline = gsap.timeline({ paused: true });
+      window.__timelines["clipnest-launch-zh-bilingual"] = mainTimeline;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>剪巢 ClipNest 连接器</title>
+  <style>
+                                    
+    :root {
+      --brand: #726cff;
+      --brand-deep: #5a53e6;
+      --text: #1f2329;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      width: 320px;
+      margin: 0;
+      padding: 14px 16px 12px;
+      font: 13px/1.5 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: #ffffff;
+    }
+    header { display: flex; align-items: center; gap: 10px; }
+    header img { width: 36px; height: 36px; flex: none; }
+    header .titles { flex: 1; min-width: 0; }
+    header h1 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    header .ver { font-size: 11px; color: var(--muted); }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; flex: none; }
+    label { display: block; margin: 12px 0 4px; font-size: 12px; color: var(--muted); }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 7px 9px; font-size: 13px;
+      border: 1px solid var(--line); border-radius: 7px; outline: none;
+    }
+    input[type="text"]:focus, input[type="password"]:focus { border-color: var(--brand); }
+    .row { display: flex; align-items: center; gap: 7px; margin: 12px 0 0; font-size: 13px; color: var(--text); }
+    .row input { accent-color: var(--brand); }
+    .actions { display: flex; gap: 8px; margin-top: 14px; }
+    button {
+      flex: 1; padding: 8px 0; font-size: 13px; border: none; border-radius: 7px;
+      cursor: pointer; color: #ffffff; background: var(--brand);
+    }
+    button:hover { background: var(--brand-deep); }
+    button.ghost { background: #f3f4f6; color: var(--text); }
+    button.ghost:hover { background: #e5e7eb; }
+    button:disabled { opacity: 0.6; cursor: default; }
+    #testResult { min-height: 18px; margin: 10px 0 0; font-size: 12px; color: var(--muted); word-break: break-all; }
+    .hint { margin: 6px 0 0; font-size: 11px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="icons/icon48.png" alt="" />
+    <div class="titles">
+      <h1>剪巢 ClipNest 连接器</h1>
+      <div class="ver" id="version">v1.0.0</div>
+    </div>
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="statusText">未连接</span>
+    </div>
+  </header>
+
+  <label for="wsUrl">服务地址</label>
+  <input type="text" id="wsUrl" spellcheck="false" placeholder="ws://127.0.0.1:9377" />
+
+  <label for="token">连接令牌</label>
+  <input type="password" id="token" spellcheck="false" placeholder="在剪巢设置中复制" />
+
+  <label class="row">
+    <input type="checkbox" id="autoFill" />
+    自动填充（聚焦输入框时上报字段上下文）
+  </label>
+
+  <div class="actions">
+    <button id="save">保存并重连</button>
+    <button id="test" class="ghost">连通性检测</button>
+  </div>
+
+  <p id="testResult"></p>
+  <p class="hint">令牌查看路径：剪巢 → 设置 → 智能 → 浏览器扩展连接。修改端口后请同步修改服务地址。</p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<template id="bilingual-captions-template">
+  <div data-hf-id="hf-58c5" id="bilingual-captions-stage" data-composition-id="bilingual-captions" data-start="0" data-duration="36.4" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-w9o1" class="caption-safe" data-layout-allow-overflow="">
+      <div data-hf-id="hf-1duf" id="caption-0" class="caption-group"><span data-hf-id="hf-j85e">复制，不该打断思考。</span><em data-hf-id="hf-yjf1">Copying should never interrupt your flow.</em></div>
+      <div data-hf-id="hf-xfqe" id="caption-1" class="caption-group"><span data-hf-id="hf-utgl">剪巢，让每一次复制自动归巢。</span><em data-hf-id="hf-d477">ClipNest gives every copy a place to belong.</em></div>
+      <div data-hf-id="hf-thmd" id="caption-2" class="caption-group"><span data-hf-id="hf-zq54">填写表单时，找到更合适的内容。</span><em data-hf-id="hf-wmxy">It finds the right content for the field you are filling.</em></div>
+      <div data-hf-id="hf-spyk" id="caption-3" class="caption-group"><span data-hf-id="hf-vs2o">打开网页版，看清今天复制了多少。</span><em data-hf-id="hf-m8sb">Open the web dashboard to see how much you copied today.</em></div>
+      <div data-hf-id="hf-g7g3" id="caption-4" class="caption-group"><span data-hf-id="hf-rodi">什么时候复制最频繁。</span><em data-hf-id="hf-m4tk">See when your copying activity peaked.</em></div>
+      <div data-hf-id="hf-c9c2" id="caption-5" class="caption-group"><span data-hf-id="hf-cvcb">内容主要来自哪里。</span><em data-hf-id="hf-gx8a">See where the content came from.</em></div>
+      <div data-hf-id="hf-63m9" id="caption-6" class="caption-group"><span data-hf-id="hf-20be">搜索、按类型筛选，再选择并统一清理。</span><em data-hf-id="hf-ch5i">Search, filter by type, then select and clean up in one place.</em></div>
+      <div data-hf-id="hf-5byg" id="caption-7" class="caption-group"><span data-hf-id="hf-882x">所有数据，只留在本机。</span><em data-hf-id="hf-ev8d">Your data stays on this device.</em></div>
+      <div data-hf-id="hf-9y8v" id="caption-8" class="caption-group"><span data-hf-id="hf-yg22">剪巢，把零碎收进秩序。</span><em data-hf-id="hf-u68m">ClipNest turns fragments into order.</em></div>
+    </div>
+    <style>
+      [data-composition-id="bilingual-captions"] { position: relative; width: 1920px; height: 1080px; overflow: hidden; pointer-events: none; font-family: "Segoe UI", sans-serif; }
+      .caption-safe { position: absolute; z-index: 40; left: 0; right: 0; bottom: 54px; display: flex; justify-content: center; min-height: 106px; padding: 0 150px; }
+      .caption-group { position: absolute; bottom: 0; display: flex; width: fit-content; max-width: 1520px; min-width: 560px; flex-direction: column; align-items: center; gap: 7px; padding: 15px 34px 17px; border: 1px solid rgba(231,228,239,.9); border-radius: 24px; background: rgba(255,255,255,.92); box-shadow: 0 16px 48px rgba(40,38,59,.16); opacity: 0; backdrop-filter: blur(18px); }
+      .caption-group span { color: #28263b; font-size: 30px; font-weight: 700; line-height: 1.22; letter-spacing: -.025em; text-align: center; }
+      .caption-group em { color: #514d61; font-size: 21px; font-style: normal; font-weight: 500; line-height: 1.25; text-align: center; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const captionTimeline = gsap.timeline({ paused: true });
+      const captionGroups = [
+        { id: '#caption-0', start: 1.8, end: 3.15 },
+        { id: '#caption-1', start: 3.75, end: 6.94 },
+        { id: '#caption-2', start: 7.49, end: 10.33 },
+        { id: '#caption-3', start: 11.13, end: 14.14 },
+        { id: '#caption-4', start: 14.54, end: 16.0 },
+        { id: '#caption-5', start: 16.26, end: 17.69 },
+        { id: '#caption-6', start: 18.56, end: 24.58 },
+        { id: '#caption-7', start: 25.39, end: 27.29 },
+        { id: '#caption-8', start: 28.11, end: 30.79 },
+      ];
+      captionGroups.forEach(function (group) {
+        captionTimeline.fromTo(group.id, { opacity: 0, y: 18, scale: .975 }, { opacity: 1, y: 0, scale: 1, duration: .3, ease: 'power3.out' }, group.start);
+        captionTimeline.to(group.id, { opacity: 0, y: -8, scale: .985, duration: .14, ease: 'power2.in' }, group.end - .14);
+        captionTimeline.set(group.id, { opacity: 0, visibility: 'hidden' }, group.end);
+      });
+      captionGroups.forEach(function (group) {
+        const element = document.querySelector(group.id);
+        if (!element) return;
+        captionTimeline.seek(group.end + .01);
+        const computed = window.getComputedStyle(element);
+        if (computed.opacity !== '0' && computed.visibility !== 'hidden') console.warn('[caption-lint] 字幕未按时退出', group.id);
+      });
+      captionTimeline.seek(0);
+      window.__timelines['bilingual-captions'] = captionTimeline;
+    </script>
+  </div>
+</template>

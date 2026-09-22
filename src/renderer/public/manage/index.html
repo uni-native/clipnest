@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#526df3" />
+    <title>剪巢 · 每日分析</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand"><span class="mark"></span><strong>剪巢</strong><span class="edition">本地剪切板管理</span></div>
+        <nav class="tabs" aria-label="页面视图">
+          <button class="tab active" data-tab="analysis" type="button">今日分析</button>
+          <button class="tab" data-tab="content" type="button">内容管理</button>
+        </nav>
+        <div class="local"><span class="local-dot"></span>数据仅在本机</div>
+      </header>
+
+      <section id="analysis-view" class="analysis-view">
+        <div class="date-row">
+          <div><strong id="date-label">今天</strong><span id="accuracy-note">今日事件精确统计</span></div>
+          <div class="date-switcher">
+            <button id="prev-day" type="button" aria-label="前一天">‹</button>
+            <time id="date-value"></time>
+            <button id="next-day" type="button" aria-label="后一天">›</button>
+          </div>
+        </div>
+
+        <section class="metrics" aria-label="今日关键指标">
+          <div><span>今日复制</span><strong id="metric-copies">0</strong><small id="copy-delta">等待数据</small></div>
+          <div><span>唯一内容</span><strong id="metric-unique">0</strong><small id="active-hours">0 个活跃时段</small></div>
+          <div><span>重复率</span><strong id="metric-repeat">0%</strong><small id="repeat-count">0 次重复复制</small></div>
+          <div><span>从剪巢粘贴</span><strong id="metric-pastes">0</strong><small id="saved-chars">至少节省 0 字</small></div>
+        </section>
+
+        <div class="analysis-grid">
+          <section class="panel activity-panel">
+            <div class="panel-head"><div><h2>24 小时复制活动</h2><p id="peak-copy">今天还没有复制记录</p></div><span id="total-size">0 B</span></div>
+            <div id="hour-chart" class="hour-chart" aria-label="按小时统计的复制次数"></div>
+            <div class="hour-axis"><span>00</span><span>04</span><span>08</span><span>12</span><span>16</span><span>20</span><span>24</span></div>
+          </section>
+
+          <section class="panel insights-panel">
+            <div class="panel-head"><div><h2>今日洞察</h2><p>直接告诉你什么值得注意</p></div></div>
+            <ol id="insights" class="insights"></ol>
+          </section>
+        </div>
+
+        <section class="panel distribution-panel">
+          <div class="distribution-col">
+            <div class="panel-head"><div><h2>复制内容构成</h2><p>按唯一内容分类，点击即可查看</p></div></div>
+            <div id="category-bars" class="rank-bars"></div>
+          </div>
+          <div class="distribution-col source-col">
+            <div class="panel-head"><div><h2>来源应用</h2><p>了解注意力主要流向哪里</p></div></div>
+            <div id="source-bars" class="rank-bars"></div>
+          </div>
+        </section>
+
+        <section class="action-strip">
+          <div class="action-title"><h2>值得处理</h2><p>只给出能立刻行动的建议</p></div>
+          <button class="action-item" data-cleanup="duplicates" type="button"><span class="action-icon violet">↻</span><span><strong>重复内容</strong><small>同一天反复复制</small></span><b id="cleanup-duplicates">0</b><i>查看</i></button>
+          <button class="action-item" data-cleanup="sensitive" type="button"><span class="action-icon coral">!</span><span><strong>敏感内容</strong><small>建议用完及时清理</small></span><b id="cleanup-sensitive">0</b><i>查看</i></button>
+          <button class="action-item" data-cleanup="lowValue" type="button"><span class="action-icon gray">⌫</span><span><strong>低价值内容</strong><small>短字符或测试文本</small></span><b id="cleanup-low">0</b><i>查看</i></button>
+        </section>
+      </section>
+
+      <section id="workspace" class="workspace">
+        <div class="workspace-title"><div><h2 id="list-title">今日内容</h2><span id="result-count">0 条结果</span></div><button id="clear-focus" class="text-button" type="button" hidden>查看今日全部</button></div>
+        <div class="toolbar">
+          <label class="search"><span>⌕</span><input id="search" type="search" placeholder="搜索剪切板内容" autocomplete="off" /></label>
+          <select id="type" aria-label="内容类型">
+            <option value="all">全部类型</option><option value="text">文本</option><option value="link">链接</option><option value="image">图片</option><option value="file">文件</option><option value="folder">文件夹</option>
+          </select>
+          <select id="group" aria-label="内容分组"><option value="all">全部分组</option><option value="none">未分组</option></select>
+          <button id="refresh" class="button secondary" type="button">刷新</button>
+        </div>
+
+        <div id="selection" class="selection" hidden>
+          <span>已选择 <strong id="selected-count">0</strong> 条</span>
+          <button id="clear-selection" class="text-button" type="button">取消选择</button>
+          <button id="delete-selected" class="button danger" type="button">删除所选</button>
+        </div>
+
+        <div class="list-head"><label><input id="select-all" type="checkbox" /> 全选当前结果</label><span>内容预览</span><span>来源应用</span><span>最后使用</span><span>操作</span></div>
+        <div id="list" class="list" aria-live="polite"></div>
+        <div id="empty" class="empty" hidden><span>⌁</span><strong>没有匹配的内容</strong><p>调整日期、搜索词或筛选条件后重试</p></div>
+        <div class="load-row"><button id="load-more" class="button secondary" type="button" hidden>加载更多</button></div>
+      </section>
+      <div id="toast" class="toast" role="status" hidden></div>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

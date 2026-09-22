@@ -1,0 +1,82 @@
+{
+  "name": "clipnest",
+  "productName": "剪巢",
+  "version": "0.1.0",
+  "description": "剪巢 ClipNest —— 本地优先的智能剪贴板管理器",
+  "main": "./out/main/index.js",
+  "private": true,
+  "author": "liuhao",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist:win": "electron-vite build && electron-builder --win nsis portable --x64",
+    "pack:win": "electron-vite build && electron-builder --win --x64 --dir",
+    "test:intelligence": "node --no-warnings --experimental-strip-types scripts/test-intelligence.mjs",
+    "preview": "electron-vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "smoke": "electron-vite build && electron . --smoke"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "better-sqlite3": "^12.2.0",
+    "electron-updater": "^6.6.2",
+    "koffi": "^2.11.0",
+    "pinia": "^4.0.3",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^3.1.0",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.8"
+  },
+  "build": {
+    "appId": "com.clipnest.app",
+    "productName": "剪巢",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/iconTemplate_win.png",
+        "to": "iconTemplate_win.png"
+      }
+    ],
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "artifactName": "ClipNest-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "剪巢"
+    },
+    "portable": {
+      "artifactName": "ClipNest-Portable-${version}-${arch}.${ext}"
+    }
+  }
+}
