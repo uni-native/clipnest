@@ -16,6 +16,7 @@ ws.on('open', () => {
   setTimeout(() => {
     ws.send(JSON.stringify({
       t: 'field-focus',
+      focusId: 'sim-focus-1',
       field: {
         id: `${fieldName}[0]`,
         tag: 'input',

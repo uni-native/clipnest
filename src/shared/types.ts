@@ -15,6 +15,20 @@ export type IntelligenceTier = 'rule' | 'embedding' | 'jev'
                    
 export type ModelState = 'unloaded' | 'loading' | 'ready' | 'failed'
 export type ModelDownloadState = 'not-downloaded' | 'downloading' | 'downloaded' | 'failed'
+export type SensitiveFieldKind =
+  | 'cardNumber'
+  | 'cardSecurityCode'
+  | 'cardExpiry'
+  | 'password'
+  | 'verificationCode'
+
+export interface SensitiveFillSettings {
+  cardNumber: boolean
+  cardSecurityCode: boolean
+  cardExpiry: boolean
+  password: boolean
+  verificationCode: boolean
+}
 
                
 export interface ModelConfig {
@@ -22,10 +36,10 @@ export interface ModelConfig {
   id: string
             
   name: string
-  kind: 'decision' | 'embedding' | 'llm'
+  kind: 'decision' | 'embedding' | 'extractor' | 'llm'
   backend: 'builtin' | 'onnx'
                                 
-  task?: 'text-classification' | 'feature-extraction'
+  task?: 'text-classification' | 'feature-extraction' | 'text-generation'
                     
   dtype?: 'q8'
                                   
@@ -207,6 +221,7 @@ export interface Settings {
     port: number
     token: string
     autoFill: boolean
+    sensitiveFill: SensitiveFillSettings
   }
                                
   webManager: {
@@ -273,7 +288,7 @@ export const DEFAULT_SETTINGS: Settings = {
       },
       {
         id: 'minilm-multilingual-q8',
-        name: 'MiniLM 多语言轻量版',
+        name: 'MiniLM 多语言精排',
         kind: 'decision',
         backend: 'onnx',
         task: 'feature-extraction',
@@ -283,7 +298,21 @@ export const DEFAULT_SETTINGS: Settings = {
         repo: 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
         path: 'minilm-multilingual-q8',
         enabled: false,
-        note: '多语言 · INT8 · 约 136 MB',
+        note: '候选接近时语义精排 · INT8 · 约 136 MB · 推荐',
+      },
+      {
+        id: 'nuextract-1.5-tiny-q8',
+        name: 'NuExtract 结构化拆分',
+        kind: 'extractor',
+        backend: 'onnx',
+        task: 'text-generation',
+        dtype: 'q8',
+        downloadId: 'nuextract-1.5-tiny-q8',
+        sizeBytes: 506_534_260,
+        repo: 'onnx-community/NuExtract-1.5-tiny-ONNX',
+        path: 'nuextract-1.5-tiny-q8',
+        enabled: false,
+        note: '中英文名片拆分 · INT8 · 约 507 MB · 基准测试推荐',
       },
     ],
     activeModelId: '',
@@ -293,6 +322,13 @@ export const DEFAULT_SETTINGS: Settings = {
     port: 9377,
     token: '',
     autoFill: true,
+    sensitiveFill: {
+      cardNumber: false,
+      cardSecurityCode: false,
+      cardExpiry: false,
+      password: false,
+      verificationCode: false,
+    },
   },
   webManager: {
     enabled: true,
@@ -416,6 +452,10 @@ export interface FieldCtx {
   label: string
   value: string
   maxLength: number
+  autocomplete?: string
+  inputMode?: string
+  role?: string
+  html?: string
 }
 
 export interface PageCtx {
@@ -429,7 +469,7 @@ export type ExtToAppMessage =
   | { t: 'hello'; token: string; ua: string; extVersion: string }
   | { t: 'ping' }
   | { t: 'pong' }
-  | { t: 'field-focus'; field: FieldCtx; page: PageCtx }
+  | { t: 'field-focus'; focusId: string; field: FieldCtx; page: PageCtx }
   | { t: 'field-blur' }
   | { t: 'fill-result'; reqId: string; ok: boolean; err?: string }
 
@@ -439,10 +479,12 @@ export type AppToExtMessage =
   | { t: 'pong' }
   | { t: 'ping' }
   | { t: 'auth-fail'; reason: string }
-  | { t: 'fill'; reqId: string; value: string; mode: 'replace' | 'append' }
+  | { t: 'fill'; reqId: string; focusId: string; value: string; mode: 'replace' | 'append'; allowSensitive?: boolean }
   | {
       t: 'suggest'
       reqId: string
+      focusId: string
+      allowSensitive?: boolean
       items: Array<{
         id: string
         title: string

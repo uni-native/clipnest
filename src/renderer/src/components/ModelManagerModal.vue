@@ -20,6 +20,7 @@ const activeId = computed<string>(() => store.settings.intelligence.activeModelI
 const KIND_LABEL: Record<ModelConfig['kind'], string> = {
   decision: '决策',
   embedding: '向量',
+  extractor: '拆分',
   llm: 'LLM',
 }
 
@@ -45,7 +46,7 @@ const TEMPLATES: Record<'zh' | 'multi', Omit<FormState, 'id' | 'enabled'>> = {
     note: '中文优先 · INT8 · 约 25 MB · 推荐',
   },
   multi: {
-    name: 'MiniLM 多语言轻量版',
+    name: 'MiniLM 多语言精排',
     kind: 'decision',
     backend: 'onnx',
     task: 'feature-extraction',
@@ -54,7 +55,7 @@ const TEMPLATES: Record<'zh' | 'multi', Omit<FormState, 'id' | 'enabled'>> = {
     sizeBytes: 136_000_000,
     repo: 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
     path: 'minilm-multilingual-q8',
-    note: '多语言 · INT8 · 约 136 MB',
+    note: '候选接近时语义精排 · INT8 · 约 136 MB · 推荐',
   },
 }
 
@@ -169,15 +170,21 @@ function onKindChange(kind: ModelConfig['kind']): void {
   if (!form.value) return
   form.value.kind = kind
                                       
-  if (kind !== 'decision' && form.value.backend === 'onnx') form.value.backend = 'builtin'
+  if (kind !== 'decision' && kind !== 'extractor' && form.value.backend === 'onnx') form.value.backend = 'builtin'
 }
 
-async function persist(next: ModelConfig[], nextActive: string): Promise<void> {
+function plainModels(items: ModelConfig[]): ModelConfig[] {
+  return items.map(item => ({ ...item }))
+}
+
+async function persist(next: ModelConfig[], nextActive: string): Promise<boolean> {
   try {
-    await api.settings.update({ intelligence: { models: next, activeModelId: nextActive } })
+    await api.settings.update({ intelligence: { models: plainModels(next), activeModelId: nextActive } })
+    return true
   } catch (e) {
     console.error('[model-manager] save failed', e)
     error.value = '保存失败，请重试'
+    return false
   }
 }
 
@@ -212,8 +219,7 @@ async function onSave(): Promise<void> {
   }
   const exists = models.value.some(m => m.id === id)
   const next = exists ? models.value.map(m => (m.id === id ? cfg : m)) : [...models.value, cfg]
-  await persist(next, activeId.value)
-  form.value = null
+  if (await persist(next, activeId.value)) form.value = null
 }
 
 async function onDelete(m: ModelConfig): Promise<void> {
@@ -221,13 +227,12 @@ async function onDelete(m: ModelConfig): Promise<void> {
   error.value = ''
   const next = models.value.filter(x => x.id !== m.id)
   const nextActive = activeId.value === m.id ? '' : activeId.value
-  await persist(next, nextActive)
-  if (form.value?.id === m.id) form.value = null
+  if (await persist(next, nextActive) && form.value?.id === m.id) form.value = null
 }
 
 async function onToggleEnabled(m: ModelConfig, v: boolean): Promise<void> {
   error.value = ''
-  const next = models.value.map(x => (x.id === m.id ? { ...x, enabled: v } : x))
+  const next = models.value.map(x => ({ ...x, enabled: x.id === m.id ? v : x.enabled }))
   await persist(next, activeId.value)
 }
 
@@ -238,8 +243,12 @@ async function onSetActive(m: ModelConfig): Promise<void> {
     return
   }
                                      
-  const next = models.value.map(x => (x.id === m.id ? { ...x, enabled: true } : x))
-  await persist(next, m.id)
+  const next = models.value.map(x => ({ ...x, enabled: x.id === m.id ? true : x.enabled }))
+  const saved = await store.update({
+    intelligence: { models: next, activeModelId: m.id },
+    jev: { mode: 'model' },
+  })
+  if (!saved) error.value = '保存失败，请重试'
 }
 
 function downloadOf(m: ModelConfig): ModelDownloadInfo | null {
@@ -261,7 +270,19 @@ async function onDownload(m: ModelConfig): Promise<void> {
   try {
     const result = await api.intelligence.downloadModel(m.id)
     downloadMap.value = { ...downloadMap.value, [m.id]: result.info }
-    if (!result.ok) error.value = result.info.error || '下载失败，请重试'
+    if (!result.ok) {
+      error.value = result.info.error || '下载失败，请重试'
+    } else if (!activeId.value && m.id === 'minilm-multilingual-q8') {
+      const next = models.value.map(item => ({
+        ...item,
+        enabled: item.id === m.id ? true : item.enabled,
+      }))
+      const saved = await store.update({
+        intelligence: { models: next, activeModelId: m.id },
+        jev: { mode: 'model' },
+      })
+      if (!saved) error.value = '模型已下载，但自动启用失败'
+    }
   } catch (e) {
     console.error('[model-manager] download failed', e)
     error.value = '下载失败，请检查网络后重试'
@@ -348,13 +369,14 @@ function absHint(path: string): string {
               <select v-model="form.kind" class="ipt" @change="onKindChange(($event.target as HTMLSelectElement).value as ModelConfig['kind'])">
                 <option value="decision">决策模型</option>
                 <option value="embedding">向量模型</option>
+                <option value="extractor">拆分模型</option>
                 <option value="llm">LLM</option>
               </select>
             </label>
             <label class="fld">
               <span class="fld-label">后端</span>
               <select v-model="form.backend" class="ipt">
-                <option value="onnx" :disabled="form.kind !== 'decision'">ONNX</option>
+                <option value="onnx" :disabled="form.kind !== 'decision' && form.kind !== 'extractor'">ONNX</option>
                 <option value="builtin" disabled>内置</option>
               </select>
             </label>

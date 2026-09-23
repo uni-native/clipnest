@@ -16,6 +16,7 @@ import type {
   Settings,
 } from '@shared/types'
 import type { JevPipeline } from '@main/intelligence/jev'
+import { detectSensitiveField } from '@main/intelligence/matchers'
 
    
                                              
@@ -52,6 +53,7 @@ let heartbeat: NodeJS.Timeout | null = null
 let watchdog: NodeJS.Timeout | null = null
 let reqSeq = 0
 let pingWait: ((ok: boolean) => void) | null = null
+const activeFocusIds = new WeakMap<WebSocket, string>()
 
    
                                                                    
@@ -70,7 +72,19 @@ try {
                                                                               
 
 function browserSettings(): Settings['browser'] {
-  return deps?.store.getSettings().browser ?? { enabled: false, port: DEFAULT_PORT, token: '', autoFill: true }
+  return deps?.store.getSettings().browser ?? {
+    enabled: false,
+    port: DEFAULT_PORT,
+    token: '',
+    autoFill: true,
+    sensitiveFill: {
+      cardNumber: false,
+      cardSecurityCode: false,
+      cardExpiry: false,
+      password: false,
+      verificationCode: false,
+    },
+  }
 }
 
 export function getBrowserStatus(): BrowserStatus {
@@ -108,6 +122,15 @@ function broadcastToAllWindows(): void {
 
 function broadcastStatus(): void {
   broadcastToAllWindows()
+}
+
+function valueForField(field: FieldCtx, value: string): string {
+  const autocomplete = (field.autocomplete ?? '').toLowerCase()
+  const match = value.trim().match(/^(0?[1-9]|1[0-2])\s*[/.-]\s*(\d{2}|\d{4})$/)
+  if (!match) return value
+  if (/(?:^|\s)cc-exp-month(?:\s|$)/.test(autocomplete)) return match[1].padStart(2, '0')
+  if (/(?:^|\s)cc-exp-year(?:\s|$)/.test(autocomplete)) return match[2]
+  return value
 }
 
                                                                               
@@ -213,18 +236,65 @@ function listen(port: number): void {
 
                                                                                 
 
-async function handleFieldFocus(ws: WebSocket, field: FieldCtx, page: PageCtx): Promise<void> {
+async function handleFieldFocus(
+  ws: WebSocket,
+  focusId: string,
+  field: FieldCtx,
+  page: PageCtx,
+): Promise<void> {
   const jev = deps?.jev
   if (!jev) return
+  const startedAt = Date.now()
+  console.log('[bridge] field-focus', {
+    focusId,
+    fieldId: field.id,
+    type: field.type,
+    label: field.label,
+    host: page.host,
+    inputLength: field.value.length,
+  })
   try {
-    const result = await jev.handleFieldFocus(field, page)
-    if (result.action === 'fill') {
-      send(ws, { t: 'fill', reqId: nextReqId(), value: result.value, mode: 'replace' })
-    } else if (result.action === 'suggest') {
-      send(ws, { t: 'suggest', reqId: nextReqId(), items: result.items })
+    const result = await jev.handleFieldFocus(field, page, focusId)
+    if (activeFocusIds.get(ws) !== focusId) {
+      console.warn('[bridge] stale field result dropped', {
+        focusId,
+        fieldId: field.id,
+        action: result.action,
+        elapsedMs: Date.now() - startedAt,
+      })
+      return
     }
+    const sensitiveKind = detectSensitiveField(field)
+    const allowSensitive = sensitiveKind
+      ? browserSettings().sensitiveFill[sensitiveKind] === true
+      : false
+    if (result.action === 'fill') {
+      send(ws, {
+        t: 'fill',
+        reqId: nextReqId(),
+        focusId,
+        value: valueForField(field, result.value),
+        mode: 'replace',
+        allowSensitive,
+      })
+    } else if (result.action === 'suggest') {
+      send(ws, {
+        t: 'suggest',
+        reqId: nextReqId(),
+        focusId,
+        items: result.items.map(item => ({ ...item, value: valueForField(field, item.value) })),
+        allowSensitive,
+      })
+    }
+    console.log('[bridge] field decision sent', {
+      focusId,
+      fieldId: field.id,
+      action: result.action,
+      itemCount: result.action === 'suggest' ? result.items.length : result.action === 'fill' ? 1 : 0,
+      elapsedMs: Date.now() - startedAt,
+    })
   } catch (e) {
-    console.error('[bridge] jev pipeline failed', e)
+    console.error('[bridge] jev pipeline failed', { focusId, fieldId: field.id, error: e })
   }
 }
 
@@ -280,12 +350,14 @@ function onMessage(ws: WebSocket, authed: { ok: boolean }, raw: unknown): void {
       break
     }
     case 'field-focus':
-      void handleFieldFocus(ws, msg.field, msg.page)
+      activeFocusIds.set(ws, msg.focusId)
+      void handleFieldFocus(ws, msg.focusId, msg.field, msg.page)
       break
     case 'fill-result':
       console.log('[bridge] fill-result', msg.reqId, msg.ok, msg.err ?? '')
       break
     case 'field-blur':
+      activeFocusIds.delete(ws)
       break
     default:
       break
@@ -297,6 +369,7 @@ function onConnection(ws: WebSocket): void {
   lastMsgAt = Date.now()
   ws.on('message', (raw: unknown) => onMessage(ws, authed, raw))
   ws.on('close', () => {
+    activeFocusIds.delete(ws)
     if (client === ws) dropClient()
   })
   ws.on('error', e => console.error('[bridge] client socket error', e))
@@ -317,7 +390,7 @@ export function startBrowserBridge(next: BridgeDeps): { stop(): void } {
     const token = newToken()
     next.store.saveSettings({ browser: { token } })
     b.token = token
-    console.log('[bridge] 已自动生成连接令牌:', token)
+    console.log('[bridge] 已自动生成连接令牌')
   }
   if (b.enabled && !wss) listen(b.port)
   return { stop: stopBridge }

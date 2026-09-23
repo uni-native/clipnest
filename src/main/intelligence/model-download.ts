@@ -42,6 +42,19 @@ const CATALOG: CatalogEntry[] = [
       'onnx/model_quantized.onnx',
     ],
   },
+  {
+    id: 'nuextract-1.5-tiny-q8',
+    repo: 'onnx-community/NuExtract-1.5-tiny-ONNX',
+    revision: 'main',
+    totalBytes: 506_534_260,
+    files: [
+      'config.json',
+      'generation_config.json',
+      'tokenizer.json',
+      'tokenizer_config.json',
+      'onnx/model_quantized.onnx',
+    ],
+  },
 ]
 
 const catalogById = new Map(CATALOG.map(item => [item.id, item]))

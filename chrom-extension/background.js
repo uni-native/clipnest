@@ -212,15 +212,19 @@ function handleAppMessage(msg) {
       void sendToActiveTarget({
         t: 'fill',
         reqId: msg.reqId,
+        focusId: msg.focusId,
         value: typeof msg.value === 'string' ? msg.value : '',
         mode: msg.mode === 'append' ? 'append' : 'replace',
+        allowSensitive: msg.allowSensitive === true,
       })
       break
     case 'suggest':
       void sendToActiveTarget({
         t: 'suggest',
         reqId: msg.reqId,
+        focusId: msg.focusId,
         items: Array.isArray(msg.items) ? msg.items.slice(0, 5) : [],
+        allowSensitive: msg.allowSensitive === true,
       })
       break
     default:
@@ -271,6 +275,10 @@ async function sendToActiveTarget(msg) {
     clearActiveTarget('目标已过期')
     return false
   }
+  if (msg.focusId && msg.focusId !== target.focusId) {
+    log('忽略过期应用结果', msg.t, msg.focusId, target.focusId)
+    return false
+  }
   try {
     await chrome.tabs.sendMessage(target.tabId, msg, { frameId: target.frameId })
     return true
@@ -294,8 +302,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         log('忽略来源不明的输入框消息')
         break
       }
+      activeTarget.focusId = typeof msg.focusId === 'string' ? msg.focusId : ''
       if (config.autoFill) {
-        if (!sendToApp({ t: 'field-focus', field: msg.field, page: msg.page })) ensureConnected()
+        if (!sendToApp({ t: 'field-focus', focusId: activeTarget.focusId, field: msg.field, page: msg.page })) ensureConnected()
       }
       break
     case 'field-blur':

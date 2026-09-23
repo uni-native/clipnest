@@ -54,7 +54,7 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/renderer/index.html'),
+          index: 'src/renderer/index.html',
         },
       },
     },

@@ -5,142 +5,331 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>剪巢智能填充 · 测试表单</title>
 <style>
+  :root {
+    --brand: #655cf6;
+    --brand-strong: #5148df;
+    --brand-soft: #f1efff;
+    --ink: #20222a;
+    --muted: #6f7280;
+    --line: #e7e5ee;
+    --surface: #ffffff;
+    --canvas: #f7f5fb;
+    --success: #237a57;
+    --danger: #c83943;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(135deg, #fce7f3 0%, #ede9fe 46%, #f5f0ff 74%, #fdf2f8 100%);
     min-height: 100vh;
+    padding: 32px 20px 56px;
+    color: var(--ink);
+    background: linear-gradient(145deg, #fcebf4 0%, #f2efff 42%, var(--canvas) 78%);
+    font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+  button, input, textarea { font: inherit; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 3px solid rgba(101, 92, 246, .24);
+    outline-offset: 2px;
+  }
+  .shell { width: min(1180px, 100%); margin: 0 auto; }
+  .page-head {
     display: flex;
-    justify-content: center;
-    padding: 40px 16px;
-    color: #1f2329;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px;
+    margin-bottom: 22px;
+    padding: 0 4px 18px;
+    border-bottom: 1px solid rgba(75, 68, 100, .14);
   }
-  .wrap { width: 560px; }
-  .card {
-    background: #fff;
-    border-radius: 16px;
+  h1 { font-size: clamp(22px, 3vw, 30px); line-height: 1.2; letter-spacing: -.025em; }
+  .brand { color: var(--brand); }
+  .lead { width: 100%; max-width: 510px; color: var(--muted); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; text-align: right; }
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(380px, 560px) minmax(320px, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .workspace > * { min-width: 0; }
+  .form-stack { display: grid; gap: 18px; }
+  .panel {
     padding: 28px;
-    box-shadow: 0 4px 20px rgba(114, 108, 255, 0.1);
-    margin-bottom: 20px;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 12px 34px rgba(66, 55, 102, .09);
   }
-  h1 { font-size: 20px; margin-bottom: 6px; }
-  .brand { color: #726cff; }
-  h2 { font-size: 15px; margin: 26px 0 4px; }
-  .hint { font-size: 12px; color: #999; margin-bottom: 10px; line-height: 1.6; }
-  .row { margin-bottom: 16px; }
-  label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+  h2 { margin-bottom: 22px; font-size: 16px; line-height: 1.4; }
+  .row { margin-bottom: 17px; }
+  label { display: block; margin-bottom: 7px; color: #4f515c; font-size: 13px; font-weight: 600; }
   input, textarea {
     width: 100%;
-    padding: 9px 12px;
-    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
     border-radius: 10px;
-    font-size: 14px;
-    font-family: inherit;
     outline: none;
-    transition: border-color .15s, box-shadow .15s;
-    background: #fafafa;
+    color: var(--ink);
+    background: #fbfafd;
+    font-size: 14px;
+    transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
   }
-  input:focus, textarea:focus { border-color: #726cff; box-shadow: 0 0 0 3px rgba(114,108,255,.12); background: #fff; }
-  textarea { min-height: 72px; resize: vertical; }
-  .pwd-note { font-size: 11px; color: #e5484d; margin-top: 4px; }
-  .filled-badge {
-    display: none;
-    font-size: 11px; color: #726cff; margin-top: 4px;
+  input::placeholder, textarea::placeholder { color: #9295a2; }
+  input:focus, textarea:focus {
+    border-color: var(--brand);
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(101, 92, 246, .11);
   }
+  textarea { min-height: 86px; resize: vertical; line-height: 1.55; }
+  .pwd-note { margin-top: 6px; color: var(--danger); font-size: 11px; line-height: 1.5; }
+  .filled-badge { display: none; margin-top: 5px; color: var(--success); font-size: 11px; }
   .row.filled .filled-badge { display: block; }
-  button.submit {
-    background: #726cff; color: #fff; border: none; border-radius: 999px;
-    padding: 10px 28px; font-size: 14px; cursor: pointer; margin-top: 6px;
+  .submit {
+    min-height: 42px;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--brand);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, transform .18s ease;
   }
-  button.submit:hover { filter: brightness(1.08); }
-  #out { font-size: 12px; color: #726cff; margin-top: 10px; min-height: 16px; }
+  .submit:hover { background: var(--brand-strong); transform: translateY(-1px); }
+  #out { min-height: 18px; margin-top: 10px; color: var(--brand-strong); font-size: 12px; line-height: 1.5; }
+  .source-window {
+    position: sticky;
+    top: 24px;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(65, 60, 84, .16);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 24px 58px rgba(60, 48, 98, .15);
+  }
+  .window-bar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 13px;
+    min-height: 54px;
+    padding: 10px 12px 10px 16px;
+    border-bottom: 1px solid var(--line);
+    background: #f8f7fb;
+  }
+  .window-dots { display: flex; gap: 6px; }
+  .window-dots span { width: 9px; height: 9px; border-radius: 50%; background: #d8d5e1; }
+  .window-dots span:first-child { background: #ff7e75; }
+  .window-dots span:nth-child(2) { background: #f7c95d; }
+  .window-dots span:last-child { background: #55c797; }
+  .window-title {
+    overflow: hidden;
+    color: #5d5f6b;
+    font-size: 12px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .copy-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid #d9d6e4;
+    border-radius: 8px;
+    color: #4f515c;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+    transition: border-color .18s ease, color .18s ease, background .18s ease;
+  }
+  .copy-button:hover { border-color: var(--brand); color: var(--brand-strong); background: var(--brand-soft); }
+  .copy-button.copied { border-color: #9bd2ba; color: var(--success); background: #f1faf6; }
+  .copy-button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+  .document {
+    max-height: calc(100vh - 162px);
+    min-height: 590px;
+    overflow: auto;
+    padding: 34px 38px 28px;
+    background: #fff;
+    scrollbar-color: #d3d0dd transparent;
+    scrollbar-width: thin;
+  }
+  .document h2 { margin-bottom: 18px; font-size: 21px; letter-spacing: -.02em; }
+  .document-text {
+    max-width: 70ch;
+    color: #353741;
+    font-family: 'Noto Serif SC', 'Songti SC', SimSun, serif;
+    font-size: 15px;
+    line-height: 1.88;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+  .window-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 42px;
+    padding: 9px 16px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    background: #faf9fc;
+    font-size: 11px;
+  }
+  #copyStatus { color: var(--success); font-weight: 650; }
+  @media (max-width: 760px) {
+    body { padding: 24px 16px 44px; }
+    .page-head { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .lead { text-align: left; }
+    .workspace { grid-template-columns: 1fr; }
+    .source-window { position: static; }
+    .document { min-height: 430px; max-height: 560px; }
+  }
+  @media (max-width: 560px) {
+    body { padding: 18px 10px 36px; }
+    .panel { padding: 22px 18px; }
+    .window-bar { grid-template-columns: auto 1fr; }
+    .copy-button { grid-column: 1 / -1; justify-content: center; }
+    .document { padding: 26px 22px 22px; }
+    .window-footer { align-items: flex-start; flex-direction: column; gap: 4px; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>剪巢 <span class="brand">智能填充</span> · 测试表单</h1>
+<main class="shell">
+  <header class="page-head">
+    <h1>剪巢 <span class="brand">智能填充</span>测试页</h1>
+    <p class="lead">复制右侧完整资料，再依次点击左侧字段，检查内容拆分、候选变化和密码保护是否符合预期。</p>
+  </header>
+
+  <div class="workspace">
+    <div class="form-stack">
+      <form class="panel" id="form">
+        <h2>求职申请表 · 示例</h2>
+
+        <div class="row">
+          <label for="fullname">姓名</label>
+          <input id="fullname" name="fullname" type="text" placeholder="你的姓名" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row" data-row="email">
+          <label for="email">邮箱地址</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="phone">手机号码</label>
+          <input id="phone" name="phone" type="tel" placeholder="139 0000 5678" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="website">个人主页</label>
+          <input id="website" name="website" type="url" placeholder="https://example.com" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="company">所在公司</label>
+          <input id="company" name="company" type="text" placeholder="公司或团队名称" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="intro">自我介绍</label>
+          <textarea id="intro" name="intro" placeholder="简单介绍一下自己"></textarea>
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="email-en">Email address · 双语识别测试</label>
+          <input id="email-en" name="email_en" type="email" placeholder="you@example.com" autocomplete="off" />
+          <div class="filled-badge">剪巢已填充 ✓</div>
+        </div>
+
+        <div class="row">
+          <label for="pwd">密码</label>
+          <input id="pwd" name="password" type="password" placeholder="••••••••" autocomplete="new-password" />
+          <div class="pwd-note">安全规则：剪巢永远不读取、不填充密码字段</div>
+        </div>
+
+        <button class="submit" type="button" id="show">查看当前填写内容</button>
+        <div id="out" aria-live="polite"></div>
+      </form>
+
+      <section class="panel">
+        <h2>搜索框 · 应识别为 search</h2>
+        <div class="row">
+          <label for="q">站内搜索</label>
+          <input id="q" name="q" type="search" placeholder="输入搜索内容" autocomplete="off" />
+        </div>
+      </section>
+    </div>
+
+    <aside class="source-window" aria-label="模拟资料窗口">
+      <div class="window-bar">
+        <div class="window-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="window-title">候选人资料.txt</div>
+        <button class="copy-button" id="copySource" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+          <span>复制完整资料</span>
+        </button>
+      </div>
+      <div class="document">
+        <h2>张三的求职资料</h2>
+        <div class="document-text" id="sourceText">张三是一名专注桌面效率工具的产品设计师与前端开发者，目前居住在杭州，正在申请 ClipNest Studio 的桌面产品工程师岗位。他习惯把复杂流程整理成清楚、可靠、可以长期使用的产品体验，过去三年主要负责 Electron 桌面应用、浏览器扩展以及本地数据工具的设计和实现。
+
+如需联系，请优先使用工作邮箱 zhangsan@example.com。备用邮箱是 backup.zhang@example.net，适合在工作邮箱无法收信时使用。手机号码为 139 0000 5678。个人主页是 https://github.com/clipnest/clipnest，可以查看近期参与的桌面工具和开源项目。
+
+张三目前就职于 ClipNest Studio，负责智能剪贴板、表单填充和本地搜索体验。他擅长 Vue、TypeScript、Electron 与 SQLite，也关注无障碍、性能和隐私保护。日常工作中，他会先确认用户真正需要完成的任务，再减少不必要的操作步骤，让界面在信息很多时仍然保持清晰。
+
+个人简介：我喜欢打造安静、快速、可信赖的效率工具。希望剪贴板不只是保存复制记录，还能理解内容之间的关系，在用户需要填写邮箱、电话、主页、公司和自我介绍时给出准确候选，同时确保密码等敏感字段永远不被读取或自动填充。</div>
+      </div>
+      <div class="window-footer">
+        <span>包含姓名、两个邮箱、手机、主页、公司与个人简介</span>
+        <span id="copyStatus" aria-live="polite"></span>
+      </div>
+    </aside>
   </div>
-
-  <form class="card" id="form">
-    <h2>求职申请表（示例）</h2>
-
-    <div class="row">
-      <label for="fullname">姓名</label>
-      <input id="fullname" name="fullname" type="text" placeholder="你的姓名" autocomplete="off" />
-    </div>
-
-    <div class="row" data-row="email">
-      <label for="email">邮箱地址</label>
-      <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="off" />
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="phone">手机号码</label>
-      <input id="phone" name="phone" type="tel" placeholder="139 **** 5678" autocomplete="off" />
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="website">个人主页（网址）</label>
-      <input id="website" name="website" type="url" placeholder="https://…" autocomplete="off" />
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="company">所在公司</label>
-      <input id="company" name="company" type="text" placeholder="公司或团队名称" autocomplete="off" />
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="intro">自我介绍</label>
-      <textarea id="intro" name="intro" placeholder="简单介绍一下自己…"></textarea>
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="email-en">Email address（英文标签，测试双语识别）</label>
-      <input id="email-en" name="email_en" type="email" placeholder="you@example.com" autocomplete="off" />
-      <div class="filled-badge">剪巢已填充 ✓</div>
-    </div>
-
-    <div class="row">
-      <label for="pwd">密码</label>
-      <input id="pwd" name="password" type="password" placeholder="••••••••" autocomplete="new-password" />
-      <div class="pwd-note">安全规则：剪巢永远不读取、不填充密码字段</div>
-    </div>
-
-    <button class="submit" type="button" id="show">查看当前填写内容</button>
-    <div id="out"></div>
-  </form>
-
-  <div class="card">
-    <h2>搜索框（应识别为 search）</h2>
-    <div class="row">
-      <label for="q">站内搜索</label>
-      <input id="q" name="q" type="search" placeholder="搜索…" autocomplete="off" />
-    </div>
-  </div>
-</div>
+</main>
 
 <script>
-  document.getElementById('form').addEventListener('submit', e => e.preventDefault())
-                            
-  document.querySelectorAll('.row input, .row textarea').forEach(el => {
-    el.addEventListener('input', () => {
-      const row = el.closest('.row')
-      if (row && el.value && el.type !== 'password' && el.id !== 'q') row.classList.add('filled')
+  document.getElementById('form').addEventListener('submit', event => event.preventDefault())
+  document.querySelectorAll('.row input, .row textarea').forEach(element => {
+    element.addEventListener('input', () => {
+      const row = element.closest('.row')
+      if (row && element.value && element.type !== 'password' && element.id !== 'q') row.classList.add('filled')
+      if (row && !element.value) row.classList.remove('filled')
     })
   })
   document.getElementById('show').addEventListener('click', () => {
     const parts = []
-    document.querySelectorAll('.card input, .card textarea').forEach(el => {
-      if (el.type === 'password' || !el.id || el.value === '') return
-      parts.push(el.id + ' = ' + el.value)
+    document.querySelectorAll('.panel input, .panel textarea').forEach(element => {
+      if (element.type === 'password' || !element.id || element.value === '') return
+      parts.push(element.id + ' = ' + element.value)
     })
-    document.getElementById('out').textContent = parts.join('  |  ') || '（空）'
+    document.getElementById('out').textContent = parts.join('  |  ') || '暂无填写内容'
+  })
+  document.getElementById('copySource').addEventListener('click', async event => {
+    const button = event.currentTarget
+    const status = document.getElementById('copyStatus')
+    try {
+      await navigator.clipboard.writeText(document.getElementById('sourceText').innerText)
+      button.classList.add('copied')
+      button.querySelector('span').textContent = '已复制'
+      status.textContent = '现在点击左侧字段开始测试'
+      window.setTimeout(() => {
+        button.classList.remove('copied')
+        button.querySelector('span').textContent = '复制完整资料'
+      }, 2200)
+    } catch (error) {
+      console.error('[test-form] copy failed', error)
+      status.textContent = '复制失败，请手动选择资料文字'
+    }
   })
 </script>
 </body>

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>剪巢敏感字段填充测试</title>
+<style>
+  :root {
+    color-scheme: light;
+    --brand: #655cf6;
+    --brand-dark: #5148df;
+    --brand-soft: #f0eeff;
+    --ink: #22232b;
+    --muted: #70727f;
+    --line: #e6e3ee;
+    --surface: #fff;
+    --canvas: #f6f4fa;
+    --success: #16734f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 34px 20px;
+    color: var(--ink);
+    background: linear-gradient(145deg, #fcebf4 0%, #f1eeff 48%, var(--canvas) 100%);
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  }
+  button, input { font: inherit; }
+  main { width: min(1040px, 100%); margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.03em; }
+  .lead { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .setup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin: 0 0 22px;
+    padding: 14px 16px;
+    border: 1px solid rgba(101, 92, 246, .15);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .72);
+    color: #555865;
+    font-size: 13px;
+  }
+  .setup strong { color: var(--brand-dark); }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .panel {
+    min-width: 0;
+    padding: 24px;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 18px 44px rgba(65, 54, 101, .1);
+  }
+  .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  h2 { margin: 0 0 5px; font-size: 17px; }
+  .panel-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+  .copy {
+    flex: none;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid #d7d3e4;
+    border-radius: 8px;
+    color: var(--brand-dark);
+    background: #fff;
+    cursor: pointer;
+  }
+  .copy:hover, .copy.copied { border-color: var(--brand); background: var(--brand-soft); }
+  .field { margin-bottom: 16px; }
+  label { display: block; margin-bottom: 7px; color: #4f515c; font-size: 13px; font-weight: 650; }
+  input {
+    width: 100%;
+    min-height: 43px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    color: var(--ink);
+    background: #fbfafd;
+  }
+  input:focus { border-color: var(--brand); background: #fff; box-shadow: 0 0 0 3px rgba(101, 92, 246, .13); }
+  .status { min-height: 18px; margin-top: 6px; color: var(--success); font-size: 11px; }
+  .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+  .clear { border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+  .result { color: var(--muted); font-size: 12px; text-align: right; }
+  .privacy { margin: 22px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  @media (max-width: 760px) {
+    body { padding: 22px 14px; }
+    .grid { grid-template-columns: 1fr; }
+    .panel { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>剪巢敏感字段填充测试</h1>
+    <p class="lead">分别复制两组本地测试数据，再点击对应输入框。关闭权限时应无响应，开启权限后应出现候选或直接填入。</p>
+  </header>
+
+  <div class="setup">
+    <span><strong>1</strong> 在剪巢设置中打开浏览器与网页智能填充</span>
+    <span><strong>2</strong> 展开敏感字段并开启需要测试的项目</span>
+    <span><strong>3</strong> 复制测试数据后点击输入框</span>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>支付字段</h2>
+          <p class="panel-note">测试卡号、有效期、CVV 的独立权限。</p>
+        </div>
+        <button class="copy" type="button" data-copy="payment">复制测试数据</button>
+      </div>
+      <div class="field">
+        <label for="card-number">卡号</label>
+        <input id="card-number" name="cardNumber" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" />
+        <div class="status" aria-live="polite"></div>
+      </div>
+      <div class="field">
+        <label for="card-expiry">有效期</label>
+        <input id="card-expiry" name="cardExpiry" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" />
+        <div class="status" aria-live="polite"></div>
+      </div>
+      <div class="field">
+        <label for="card-cvc">CVV</label>
+        <input id="card-cvc" name="cardCvc" type="text" inputmode="numeric" autocomplete="cc-csc" placeholder="000" />
+        <div class="status" aria-live="polite"></div>
+      </div>
+      <div class="actions">
+        <button class="clear" type="button" data-clear="payment">清空本组</button>
+        <span class="result" id="payment-result">尚未填入</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>密码与验证码</h2>
+          <p class="panel-note">测试密码和一次性验证码的独立权限。</p>
+        </div>
+        <button class="copy" type="button" data-copy="account">复制测试数据</button>
+      </div>
+      <div class="field">
+        <label for="account-password">密码</label>
+        <input id="account-password" name="password" type="password" autocomplete="current-password" placeholder="输入测试密码" />
+        <div class="status" aria-live="polite"></div>
+      </div>
+      <div class="field">
+        <label for="verification-code">验证码</label>
+        <input id="verification-code" name="verificationCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码" />
+        <div class="status" aria-live="polite"></div>
+      </div>
+      <div class="actions">
+        <button class="clear" type="button" data-clear="account">清空本组</button>
+        <span class="result" id="account-result">尚未填入</span>
+      </div>
+    </section>
+  </div>
+
+  <p class="privacy">本页没有提交功能，不向网络发送任何字段。状态只显示是否填入和字符数量，不展示敏感内容。</p>
+</main>
+
+<script>
+  const groups = {
+    payment: {
+      ids: ['card-number', 'card-expiry', 'card-cvc'],
+      text: ['卡号 / Card Number', '4242 4242 4242 4242', '有效期 / Expiration Date', '12/34', 'CVV', '123'].join('\n'),
+    },
+    account: {
+      ids: ['account-password', 'verification-code'],
+      text: ['密码 / Password', 'ClipNest-Test-2026!', '验证码 / Verification Code', '654321'].join('\n'),
+    },
+  }
+
+  function update(groupName) {
+    const group = groups[groupName]
+    const filled = group.ids.filter(id => document.getElementById(id).value.length > 0)
+    document.getElementById(`${groupName}-result`).textContent = filled.length
+      ? `已填入 ${filled.length} 项`
+      : '尚未填入'
+    group.ids.forEach(id => {
+      const input = document.getElementById(id)
+      input.closest('.field').querySelector('.status').textContent = input.value
+        ? `已填入 ${input.value.length} 个字符`
+        : ''
+    })
+  }
+
+  document.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', () => update(input.id.startsWith('card-') ? 'payment' : 'account'))
+  })
+
+  document.querySelectorAll('[data-copy]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const groupName = button.dataset.copy
+      try {
+        await navigator.clipboard.writeText(groups[groupName].text)
+        button.textContent = '已复制，点击字段'
+        button.classList.add('copied')
+        window.setTimeout(() => {
+          button.textContent = '复制测试数据'
+          button.classList.remove('copied')
+        }, 2200)
+      } catch (error) {
+        console.error('[sensitive-test] copy failed', error)
+        button.textContent = '复制失败'
+      }
+    })
+  })
+
+  document.querySelectorAll('[data-clear]').forEach(button => {
+    button.addEventListener('click', () => {
+      const groupName = button.dataset.clear
+      groups[groupName].ids.forEach(id => {
+        const input = document.getElementById(id)
+        input.value = ''
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      update(groupName)
+    })
+  })
+</script>
+</body>
+</html>

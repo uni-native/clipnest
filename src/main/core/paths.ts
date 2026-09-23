@@ -16,9 +16,12 @@ export const imagesDir = join(blobsDir, 'images')
                                   
 export const modelsDir = join(userDataDir, 'models')
 
+export const logsDir = join(userDataDir, 'logs')
+
 export function ensureDirs(): void {
   mkdirSync(userDataDir, { recursive: true })
   mkdirSync(blobsDir, { recursive: true })
   mkdirSync(imagesDir, { recursive: true })
   mkdirSync(modelsDir, { recursive: true })
+  mkdirSync(logsDir, { recursive: true })
 }

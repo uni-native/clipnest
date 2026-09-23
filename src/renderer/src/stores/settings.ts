@@ -49,6 +49,13 @@ function fallbackSettings(): Settings {
       port: 9377,
       token: '',
       autoFill: true,
+      sensitiveFill: {
+        cardNumber: false,
+        cardSecurityCode: false,
+        cardExpiry: false,
+        password: false,
+        verificationCode: false,
+      },
     },
     webManager: {
       enabled: true,

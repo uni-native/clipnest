@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import '@main/core/appName'
 import { ensureDirs, imagesDir } from '@main/core/paths'
+import { initFileLogging } from '@main/core/logger'
 import { initStore } from '@main/core/store'
 import {
   bindShellStore,
@@ -31,7 +32,7 @@ import type { CaptureEvent, ClipStore, NewPost, Settings } from '@shared/types'
 
 const SMOKE = process.argv.includes('--smoke')
 
-                                 
+app.disableHardwareAcceleration()
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
                                                       
@@ -76,6 +77,7 @@ let webManager: WebManagerHandle | null = null
 
 async function bootstrap(): Promise<void> {
   ensureDirs()
+  initFileLogging()
   store = initStore()
   bindShellStore(store)
   const settings: Settings = store.getSettings()

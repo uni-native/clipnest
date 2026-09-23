@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { DeepPartial, IntelligenceStatus, IntelligenceTier, ModelConfig, Settings, ThemeType } from '@shared/types'
+import type { DeepPartial, IntelligenceStatus, ModelConfig, SensitiveFieldKind, Settings, ThemeType } from '@shared/types'
 import { useSettingsStore } from '../stores/settings'
 import { api } from '../api/bridge'
 import { playClipboardSound, type ClipboardSoundKind } from '../utils/sound'
@@ -228,20 +228,6 @@ async function onCheckUpdate(): Promise<void> {
   }
 }
 
-const STATE_TEXT: Record<IntelligenceStatus['state'], string> = {
-  unloaded: '未加载',
-  loading: '加载中…',
-  ready: '就绪',
-  failed: '加载失败',
-}
-
-                                                 
-const TIERS: Array<{ value: IntelligenceTier; label: string }> = [
-  { value: 'rule', label: 'L0 规则' },
-  { value: 'embedding', label: 'L1 本地 Embedding' },
-  { value: 'jev', label: 'L2 Jev 层级' },
-]
-
 const APP_VERSION = 'v0.1.0'
 const dataDir = ref('')
 
@@ -304,6 +290,18 @@ const pingText = computed(() =>
   pingResult.value === 'ok' ? '连通正常' : pingResult.value === 'fail' ? '未连接或响应超时' : '',
 )
 
+const SENSITIVE_FILL_OPTIONS: Array<{ key: SensitiveFieldKind; label: string }> = [
+  { key: 'cardNumber', label: '卡号' },
+  { key: 'cardSecurityCode', label: 'CVV 与 CVC' },
+  { key: 'cardExpiry', label: '有效期' },
+  { key: 'password', label: '密码' },
+  { key: 'verificationCode', label: '验证码' },
+]
+
+const sensitiveFillCount = computed(() =>
+  SENSITIVE_FILL_OPTIONS.filter(item => settings.value.browser.sensitiveFill[item.key]).length,
+)
+
 async function onBrowserEnabled(v: boolean): Promise<void> {
   pingResult.value = ''
   tokenTip.value = ''
@@ -312,6 +310,11 @@ async function onBrowserEnabled(v: boolean): Promise<void> {
 
 async function onAutoFill(v: boolean): Promise<void> {
   await applyBrowserConfig({ autoFill: v })
+}
+
+function onSensitiveFill(kind: SensitiveFieldKind, label: string, enabled: boolean): void {
+  if (enabled && !window.confirm(`允许剪巢向“${label}”字段填入剪贴板内容？请仅在可信页面开启。`)) return
+  void store.update({ browser: { sensitiveFill: { [kind]: enabled } } })
 }
 
 function onPortChange(e: Event): void {
@@ -975,15 +978,6 @@ onMounted(() => {
                 <span class="card-dot" style="background: #cd75ff"></span>
                 <span class="card-title">智能</span>
               </div>
-                                               
-              <div class="intel-tiers">
-                <div v-for="t in TIERS" :key="t.value" class="tier" :class="{ on: intel && intel.tier === t.value }">
-                  <span class="tier-dot"></span>
-                  <span class="tier-name">{{ t.label }}</span>
-                  <span v-if="intel && intel.tier === t.value" class="tier-state">{{ STATE_TEXT[intel.state] }}</span>
-                </div>
-              </div>
-                           
               <div class="intel-toggles">
                 <div class="srow">
                   <span class="srow-label">智能分组</span>
@@ -1003,6 +997,13 @@ onMounted(() => {
                     <Toggle :model-value="settings.intelligence.smartPasteMatch" @update:model-value="(v) => patch({ intelligence: { smartPasteMatch: v } })" />
                   </div>
                 </div>
+                <div class="srow model-entry-row">
+                  <span class="srow-label">MiniLM 精排</span>
+                  <span class="srow-grow"></span>
+                  <span v-if="activeModelName" class="muted model-name" :title="activeModelName">{{ activeModelName }}</span>
+                  <span v-else class="tip warn">未启用</span>
+                  <button class="pill-btn sm" type="button" @click="onManageModels">管理</button>
+                </div>
               </div>
             </div>
 
@@ -1010,7 +1011,7 @@ onMounted(() => {
             <div class="card card-l1">
               <div class="card-head">
                 <span class="card-dot" style="background: #726cff"></span>
-                <span class="card-title">本地 Embedding（L1）</span>
+                <span class="card-title">本地向量</span>
               </div>
               <div class="rows">
                 <div class="srow">
@@ -1041,7 +1042,7 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
-              <p class="tip">启用后：采集的文本/链接自动建立向量索引，语义搜索与 Jev 智能粘贴匹配改用向量相似度（规则仍参与混合打分）。</p>
+              <p class="tip">开启后支持语义搜索与智能匹配，规则继续参与排序。</p>
             </div>
           </div>
         </section>
@@ -1148,12 +1149,30 @@ onMounted(() => {
                   <span class="srow-grow"></span>
                   <Toggle :model-value="browserStatus?.autoFill ?? true" @update:model-value="onAutoFill" />
                 </div>
+                <details class="sensitive-settings">
+                  <summary>
+                    <span class="srow-label">敏感字段</span>
+                    <span class="sensitive-state">{{ sensitiveFillCount ? `${sensitiveFillCount} 项已允许` : '全部关闭' }}</span>
+                    <span class="srow-grow"></span>
+                    <span class="sensitive-action">配置</span>
+                  </summary>
+                  <div class="sensitive-grid">
+                    <div v-for="item in SENSITIVE_FILL_OPTIONS" :key="item.key" class="sensitive-option">
+                      <span>{{ item.label }}</span>
+                      <Toggle
+                        :model-value="settings.browser.sensitiveFill[item.key]"
+                        @update:model-value="(enabled) => onSensitiveFill(item.key, item.label, enabled)"
+                      />
+                    </div>
+                  </div>
+                  <p class="tip sensitive-tip">仅在你点击对应字段时使用剪贴板候选，请只在可信页面开启。</p>
+                </details>
                 <div v-if="settings.jev.mode === 'model'" class="srow model-row">
                   <span class="srow-label">决策模型</span>
                   <span v-if="activeModelName" class="muted model-name" :title="activeModelName">{{ activeModelName }}</span>
                   <span v-else class="tip warn">尚未选择模型</span>
                   <span class="srow-grow"></span>
-                  <button class="pill-btn sm ghost" type="button" @click="onManageModels">选择模型</button>
+                  <button class="pill-btn sm ghost" type="button" @click="section = 'intelligence'">前往智能</button>
                 </div>
                 <p v-else class="tip mode-tip">当前使用规则与内置向量，无需下载模型</p>
               </div>
@@ -1180,7 +1199,8 @@ onMounted(() => {
 }
                       
 .page-intel > .col > .card.card-intel {
-  flex: 1.3 1 0;
+  flex: 0 0 auto;
+  min-height: 198px;
 }
                                  
 .page-browser > .col > .card.card-browser {
@@ -1188,6 +1208,7 @@ onMounted(() => {
 }
 .page-browser > .col > .card.card-jev {
   flex: 1.12 1 0;
+  overflow-y: auto;
 }
                      
 .card-browser,
@@ -1289,6 +1310,50 @@ onMounted(() => {
 }
 .srow-grow {
   flex: 1;
+}
+.sensitive-settings {
+  border-top: 1px solid var(--border-2);
+  padding-top: 6px;
+}
+.sensitive-settings summary {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.sensitive-settings summary::-webkit-details-marker {
+  display: none;
+}
+.sensitive-state,
+.sensitive-action {
+  font-size: 11.5px;
+}
+.sensitive-state {
+  color: var(--text-3);
+}
+.sensitive-action {
+  color: var(--brand);
+}
+.sensitive-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 18px;
+}
+.sensitive-option {
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-2);
+  color: var(--text-2);
+  font-size: 12px;
+}
+.sensitive-tip {
+  margin-top: 8px;
 }
 
                                       
@@ -1429,6 +1494,10 @@ onMounted(() => {
 }
 .model-row {
   padding-top: 2px !important;
+}
+.model-entry-row {
+  min-height: 30px !important;
+  gap: 12px;
 }
 .mode-tip {
   margin-top: auto;

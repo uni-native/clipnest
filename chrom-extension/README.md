@@ -59,8 +59,9 @@ ClipNest（剪巢）桌面端与浏览器之间的桥。用户在浏览器表单
 ## 隐私与边界
 
 - 字段上下文（类型/名称/label 等）只发往**本机** `127.0.0.1` 的 ClipNest，扩展不含任何远程请求
-- **密码字段（`type=password`）永远不上报、永远不填充**（硬规则，双重校验）
-- 上报的字段值截断到 500 字符、label 截断到 100 字符，仅作匹配线索
+- 卡号、安全码、有效期、密码和验证码默认不填充，可在桌面端逐项允许
+- 敏感字段的现有内容永远不上报；每次填充还需桌面端授权标记通过扩展二次校验
+- 普通字段值截断到 500 字符、label 截断到 100 字符，仅作匹配线索
 
 ## 开发与自验
 
@@ -81,12 +82,13 @@ node --check background.js && node --check content.js && node --check popup.js
 
 ## 协议速查（v1）
 
-扩展 → 应用：`hello`（连接后首条，带 token）/ `ping` / `field-focus` / `field-blur` / `fill-result`
-应用 → 扩展：`welcome` / `pong` / `auth-fail` / `fill`（replace|append）/ `suggest`（最多 5 条 `{id,title,preview,value,scope}`）
+扩展 → 应用：`hello`（连接后首条，带 token）/ `ping` / `field-focus`（带 focusId）/ `field-blur` / `fill-result`
+应用 → 扩展：`welcome` / `pong` / `auth-fail` / `fill`（带 focusId，replace|append）/ `suggest`（带 focusId，最多 5 条 `{id,title,preview,value,scope}`）
 
 ## 已知限制
 
 - **`all_frames` 行为**：内容脚本保留 iframe 输入框支持，但后台记录实际触发 `field-focus` 的 `tabId`、`frameId` 和 `documentId`。`fill`/`suggest` 只发送给该目标，不再遍历或广播到其他标签页。
+- **异步结果隔离**：每次字段上报生成唯一 `focusId`。桌面端、扩展后台和内容脚本都会拒绝已经失焦或被新输入替代的旧结果。
 - **性能边界**：输入框识别完全由焦点和输入事件触发，不使用 `MutationObserver`，不扫描整页；标签文本、同级元素和 DOM 路径均有读取上限；建议浮层在滚动时通过 `requestAnimationFrame` 合并定位。
 - **失效保护**：切换标签页、页面隐藏、页面卸载、输入框移除或目标超过 120 秒时，后台立即清除目标并拒绝继续注入。
 - **页面恢复保护**：从新标签页返回时不主动检索 `activeElement`，只响应浏览器真实派发的 `focusin` 或用户输入；250ms 内的重复焦点上报会合并为一次。
