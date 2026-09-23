@@ -15,8 +15,6 @@
   </p>
 </div>
 
-![剪巢横向剪贴板面板](demo-video/clipnest-launch-bilingual/assets/panel-horizontal.png)
-
 ## 为什么是剪巢
 
 普通剪贴板只记住“刚才复制了什么”。剪巢会把内容保存在本机，自动去重、分类和建立索引，让它们能够被再次搜索、整理和使用。
