@@ -1,17 +1,17 @@
 {
   "manifest_version": 3,
   "name": "剪巢 ClipNest 连接器",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "把浏览器表单上下文桥接到本机剪巢 ClipNest，实现剪贴板历史智能填充。",
   "minimum_chrome_version": "116",
-  "permissions": ["storage", "activeTab", "alarms"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true

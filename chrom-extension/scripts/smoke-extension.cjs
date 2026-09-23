@@ -13,9 +13,17 @@
                                                                              
    
 
+const fs = require('node:fs')
+const path = require('node:path')
+
+const extensionRoot = path.resolve(__dirname, '..')
+const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, 'manifest.json'), 'utf8'))
+const backgroundSource = fs.readFileSync(path.join(extensionRoot, 'background.js'), 'utf8')
+const contentSource = fs.readFileSync(path.join(extensionRoot, 'content.js'), 'utf8')
+
 const WS_URL = process.env.CLIPNEST_WS_URL || 'ws://127.0.0.1:9377'
 const TOKEN = process.env.CLIPNEST_TOKEN || 'smoke-test'
-const EXT_VERSION = '1.0.0'
+const EXT_VERSION = manifest.version
 
 let passCount = 0
 let failCount = 0
@@ -148,6 +156,16 @@ function check(name, msg, validator) {
   }
 }
 
+function checkSource(name, condition, note) {
+  if (condition) {
+    console.log(`PASS  ${name}`)
+    passCount++
+    return
+  }
+  console.log(`FAIL  ${name} — ${note}`)
+  failCount++
+}
+
 const sampleField = {
   id: '#email',
   tag: 'input',
@@ -206,6 +224,61 @@ console.log('== A2. 负向用例（校验器应拒绝） ==')
 expectReject('拒绝缺字段的 field-focus', { t: 'field-focus', field: { id: 'x' }, page: {} }, validateExtToApp)
 expectReject('拒绝非法 fill.mode', { t: 'fill', reqId: 'r', value: 'v', mode: 'insert' }, validateAppToExt)
 expectReject('拒绝未知消息类型', { t: 'no-such-type' }, validateExtToApp)
+
+console.log('== A3. 性能与定向注入约束 ==')
+checkSource(
+  '只向当前输入目标发送应用消息',
+  backgroundSource.includes('sendToActiveTarget') && !backgroundSource.includes('broadcastToTabs'),
+  '仍存在全标签页广播',
+)
+checkSource(
+  '按标签页和 frameId 定位输入目标',
+  backgroundSource.includes('sender.frameId') && backgroundSource.includes('{ frameId: target.frameId }'),
+  '缺少子页面定向信息',
+)
+checkSource(
+  '输入框检索不执行整页 querySelectorAll',
+  !contentSource.includes('querySelectorAll'),
+  '仍存在无上限的整页节点检索',
+)
+checkSource(
+  '同级元素遍历有明确上限',
+  contentSource.includes('SIBLING_SCAN_MAX') && contentSource.includes('scanned < SIBLING_SCAN_MAX'),
+  '同级元素遍历缺少上限',
+)
+checkSource(
+  '滚动定位使用逐帧合并',
+  contentSource.includes('requestAnimationFrame') && contentSource.includes('scheduleOverlayPosition'),
+  '滚动时仍可能重复触发布局计算',
+)
+checkSource(
+  '页面恢复时不主动检索输入框',
+  !contentSource.includes("window.addEventListener('focus'") && !contentSource.includes('getDeepActiveElement'),
+  '页面恢复仍会主动读取焦点元素',
+)
+checkSource(
+  '焦点上报具备短时合并保护',
+  contentSource.includes('FOCUS_REPORT_MIN_MS') && contentSource.includes('pendingFocusTimer'),
+  '焦点事件可能无上限重复上报',
+)
+checkSource(
+  '自动恢复焦点不会触发检索或注入',
+  contentSource.includes('USER_INTENT_MAX_AGE_MS') &&
+    contentSource.includes('hasRecentUserIntent') &&
+    contentSource.includes("document.addEventListener('pointerdown', markUserIntent") &&
+    contentSource.includes("document.addEventListener('keydown', markUserIntent"),
+  '输入框聚焦缺少用户操作门槛',
+)
+checkSource(
+  '未引入全页变化监听',
+  !contentSource.includes('MutationObserver'),
+  '发现 MutationObserver，需检查是否造成批量扫描',
+)
+checkSource(
+  '只注入 HTTP 和 HTTPS 页面',
+  manifest.content_scripts[0].matches.join(',') === 'http://*/*,https://*/*',
+  '页面范围仍然过宽',
+)
 
                                                                                           
 

@@ -10,8 +10,8 @@ ClipNest（剪巢）桌面端与浏览器之间的桥。用户在浏览器表单
 
 | 文件 | 职责 |
 |---|---|
-| `manifest.json` | MV3 清单：权限（storage / activeTab）、`<all_urls>` 主机权限（表单检测需要）、后台 SW、内容脚本（所有框架 document_idle 注入）、popup、图标 |
-| `background.js` | Service Worker：维护 WebSocket 连接、连接后立即发 hello、指数退避重连（1s→2s→4s→8s，封顶 30s，带抖动）、25s 心跳 / 120s 无 pong 强断、`fill`/`suggest` 广播给所有 http(s) 标签页、`auth-fail` 停止重连风暴 |
+| `manifest.json` | MV3 清单：权限（storage / alarms）、HTTP 与 HTTPS 页面权限、后台 SW、内容脚本（所有框架 document_idle 注入）、popup、图标 |
+| `background.js` | Service Worker：维护 WebSocket 连接、连接后立即发 hello、指数退避重连、心跳检测，并把 `fill`/`suggest` 只发送给最后聚焦的标签页与 iframe |
 | `content.js` | 注入所有页面：字段检测（focusin/focusout 300ms 防抖）、输入变化 180ms 更新候选、稳定 FieldCtx 生成、按字段类型执行填充并派发 input/change 事件、建议浮层（最多 5 条、Esc/外点/失焦关闭、事件不冒泡到页面） |
 | `popup.html` / `popup.js` | 弹窗：连接状态（带颜色圆点）、服务地址 / 令牌编辑、自动填充开关、保存并重连、连通性检测（ping→pong，2s 超时） |
 | `icons/icon16/48/128.png` | 扩展图标（品牌紫 #726CFF 圆角方形 + 白色简化剪贴板图形，4x 超采样抗锯齿） |
@@ -86,7 +86,11 @@ node --check background.js && node --check content.js && node --check popup.js
 
 ## 已知限制
 
-- **`all_frames` 行为**：内容脚本注入所有 iframe（含跨域）。`fill`/`suggest` 由后台广播给所有 http(s) 标签页，仅"当前持有焦点字段"的那个帧会执行并回报 `fill-result`；若字段在应用下发 fill 前已失焦，则不会有任何帧回应（桌面端需自行超时）。
+- **`all_frames` 行为**：内容脚本保留 iframe 输入框支持，但后台记录实际触发 `field-focus` 的 `tabId`、`frameId` 和 `documentId`。`fill`/`suggest` 只发送给该目标，不再遍历或广播到其他标签页。
+- **性能边界**：输入框识别完全由焦点和输入事件触发，不使用 `MutationObserver`，不扫描整页；标签文本、同级元素和 DOM 路径均有读取上限；建议浮层在滚动时通过 `requestAnimationFrame` 合并定位。
+- **失效保护**：切换标签页、页面隐藏、页面卸载、输入框移除或目标超过 120 秒时，后台立即清除目标并拒绝继续注入。
+- **页面恢复保护**：从新标签页返回时不主动检索 `activeElement`，只响应浏览器真实派发的 `focusin` 或用户输入；250ms 内的重复焦点上报会合并为一次。
+- **用户意图保护**：`focusin` 前 1 秒内必须发生页面内真实鼠标或键盘操作，才允许启动检索与注入。关闭新标签页后由浏览器自动恢复的焦点不会触发智能填充；用户直接输入时仍会立即建立上下文。
 - **SPA 路由**：字段检测基于 `focusin` 事件，路由切换后新聚焦字段会自然重新上报，PageCtx 每次聚焦时实时读取，无需额外处理；但浮层不会在路由切换时自动关闭（会有 focusout 兜底）。
 - **shadow DOM**：开放 shadow root 内的字段可通过 `composedPath` 识别；闭合 shadow root 无法进入。
 - **建议点击的取值**：`suggest.value` 携带完整填充值，`preview` 仅展示上下文；`scope` 区分当前内容与全库候选。

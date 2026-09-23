@@ -23,6 +23,7 @@ const RECONNECT_MAX_MS = 30_000
 const RECONNECT_JITTER = 0.2                         
 const PING_TEST_TIMEOUT_MS = 2_000                  
 const KEEPALIVE_ALARM = 'clipnest-keepalive'
+const TARGET_TTL_MS = 120_000
 
                                                                               
 
@@ -39,6 +40,7 @@ let watchdogTimer = 0
 let lastPongAt = 0
                                             
 const pendingTests = []
+let activeTarget = null
 
                                                                               
 
@@ -105,6 +107,10 @@ function connect() {
   ws = socket
 
   socket.addEventListener('open', () => {
+    if (ws !== socket) {
+      socket.close()
+      return
+    }
     reconnectAttempt = 0
     lastPongAt = Date.now()
                                           
@@ -113,6 +119,7 @@ function connect() {
   })
 
   socket.addEventListener('message', (ev) => {
+    if (ws !== socket) return
     let msg
     try {
       msg = JSON.parse(ev.data)
@@ -123,6 +130,7 @@ function connect() {
   })
 
   socket.addEventListener('close', () => {
+    if (ws !== socket) return
     stopHeartbeat()
     ws = null
     if (status === 'auth-failed') return              
@@ -131,7 +139,8 @@ function connect() {
   })
 
   socket.addEventListener('error', () => {
-                                               
+    if (ws !== socket) return
+
     log('WebSocket 连接错误', url)
   })
 }
@@ -200,8 +209,7 @@ function handleAppMessage(msg) {
       log('令牌被拒绝：', authFailReason)
       break
     case 'fill':
-                                                             
-      broadcastToTabs({
+      void sendToActiveTarget({
         t: 'fill',
         reqId: msg.reqId,
         value: typeof msg.value === 'string' ? msg.value : '',
@@ -209,7 +217,7 @@ function handleAppMessage(msg) {
       })
       break
     case 'suggest':
-      broadcastToTabs({
+      void sendToActiveTarget({
         t: 'suggest',
         reqId: msg.reqId,
         items: Array.isArray(msg.items) ? msg.items.slice(0, 5) : [],
@@ -229,42 +237,77 @@ function flushPendingTests(ok) {
 
                                                                                  
 
-async function broadcastToTabs(msg) {
-  let tabs = []
-  try {
-    tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] })
-  } catch (e) {
-    log('查询标签页失败', e)
-    return
+function senderTarget(sender) {
+  if (!sender || !sender.tab || typeof sender.tab.id !== 'number') return null
+  return {
+    tabId: sender.tab.id,
+    frameId: typeof sender.frameId === 'number' ? sender.frameId : 0,
+    documentId: typeof sender.documentId === 'string' ? sender.documentId : '',
+    focusedAt: Date.now(),
   }
-  await Promise.all(
-    tabs.map(async (tab) => {
-      try {
-        await chrome.tabs.sendMessage(tab.id, msg)
-      } catch {
-                                                    
-      }
-    }),
-  )
+}
+
+function isSameTarget(sender, target = activeTarget) {
+  if (!target) return false
+  const next = senderTarget(sender)
+  if (!next || next.tabId !== target.tabId || next.frameId !== target.frameId) return false
+  return !target.documentId || !next.documentId || target.documentId === next.documentId
+}
+
+function clearActiveTarget(reason) {
+  if (!activeTarget) return
+  activeTarget = null
+  log('清除输入目标', reason)
+}
+
+async function sendToActiveTarget(msg) {
+  if (!config.autoFill) return false
+  const target = activeTarget
+  if (!target) {
+    log('忽略应用消息：没有已聚焦输入框', msg.t)
+    return false
+  }
+  if (Date.now() - target.focusedAt > TARGET_TTL_MS) {
+    clearActiveTarget('目标已过期')
+    return false
+  }
+  try {
+    await chrome.tabs.sendMessage(target.tabId, msg, { frameId: target.frameId })
+    return true
+  } catch (e) {
+    if (activeTarget === target) clearActiveTarget('目标页面不可用')
+    log('向输入目标发送消息失败', e)
+    return false
+  }
 }
 
                                                                                 
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg.t !== 'string') return
 
   switch (msg.t) {
                                            
     case 'field-focus':
-                                                   
+      activeTarget = senderTarget(sender)
+      if (!activeTarget) {
+        log('忽略来源不明的输入框消息')
+        break
+      }
       if (config.autoFill) {
         if (!sendToApp({ t: 'field-focus', field: msg.field, page: msg.page })) ensureConnected()
       }
       break
     case 'field-blur':
+      if (!isSameTarget(sender)) break
+      clearActiveTarget('输入框失焦')
       if (!sendToApp({ t: 'field-blur' })) ensureConnected()
       break
     case 'fill-result':
+      if (!isSameTarget(sender)) {
+        log('忽略非当前输入目标的填充结果')
+        break
+      }
       sendToApp({
         t: 'fill-result',
         reqId: msg.reqId,
@@ -273,6 +316,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       })
       break
     case 'suggest-pick':
+      if (!isSameTarget(sender)) break
                                                            
       log('suggest-pick（协议 v1 仅记录）', msg.reqId, msg.itemId)
       break
@@ -295,10 +339,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       authFailReason = ''
       reconnectAttempt = 0
       setStatus('disconnected')
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      reconnectTimer = 0
+      const previous = ws
+      ws = null
+      stopHeartbeat()
       try {
-        ws && ws.close()
-      } catch {
-                
+        previous && previous.close()
+      } catch (e) {
+        log('关闭旧连接失败', e)
       }
       connect()
       break
@@ -358,19 +407,38 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (changes.autoFill) {
     config.autoFill = changes.autoFill.newValue !== false
+    if (!config.autoFill) {
+      clearActiveTarget('智能填充已关闭')
+      sendToApp({ t: 'field-blur' })
+    }
   }
   if (needReconnect) {
                                                
     authFailReason = ''
     reconnectAttempt = 0
     setStatus('disconnected')
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = 0
+    const previous = ws
+    ws = null
+    stopHeartbeat()
     try {
-      ws && ws.close()
-    } catch {
-              
+      previous && previous.close()
+    } catch (e) {
+      log('关闭旧连接失败', e)
     }
     connect()
   }
+})
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (activeTarget && activeTarget.tabId === tabId) clearActiveTarget('标签页已关闭')
+})
+
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  if (!activeTarget || activeTarget.tabId === tabId) return
+  clearActiveTarget('已切换标签页')
+  sendToApp({ t: 'field-blur' })
 })
 
                                                                               

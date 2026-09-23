@@ -23,9 +23,30 @@
   const BLUR_DELAY = 300          
   const SUGGEST_MAX = 5            
   const OVERLAY_Z = '2147483647'
+  const DOM_PATH_DEPTH_MAX = 5
+  const SIBLING_SCAN_MAX = 64
+  const LABEL_NODE_MAX = 64
+  const VALUE_NODE_MAX = 128
+  const PAGE_URL_MAX = 2048
+  const PAGE_TITLE_MAX = 200
+  const FOCUS_REPORT_MIN_MS = 250
+  const USER_INTENT_MAX_AGE_MS = 1_000
 
                                          
-  const TEXT_INPUT_TYPES = new Set(['', 'text', 'search', 'tel', 'email', 'url', 'number'])
+  const TEXT_INPUT_TYPES = new Set([
+    '',
+    'text',
+    'search',
+    'tel',
+    'email',
+    'url',
+    'number',
+    'date',
+    'datetime-local',
+    'month',
+    'week',
+    'time',
+  ])
   const NON_HINT_TAGS = ['script', 'style', 'select', 'input', 'textarea', 'img', 'svg']
 
                                                                                 
@@ -35,6 +56,11 @@
   let blurTimer = 0
   let inputTimer = 0
   let applyingFill = false
+  let lastContextSignature = ''
+  let lastFocusSentAt = 0
+  let lastUserIntentAt = 0
+  let pendingFocusTimer = 0
+  let positionFrame = 0
 
   const overlay = { root: null, field: null, reqId: '' }
 
@@ -43,10 +69,12 @@
   function send(msg) {
     try {
       const r = chrome.runtime.sendMessage(msg)
-                                                       
-      if (r && typeof r.catch === 'function') r.catch(() => {})
-    } catch {
-                      
+
+      if (r && typeof r.catch === 'function') {
+        r.catch((e) => console.error('[ClipNest] 发送消息失败', e))
+      }
+    } catch (e) {
+      console.error('[ClipNest] 发送消息失败', e)
     }
   }
 
@@ -84,34 +112,32 @@
     if (el.id) return '#' + el.id
     const tag = el.tagName.toLowerCase()
     const name = el.getAttribute('name')
-    if (name) {
-      try {
-        if (document.querySelectorAll(`${tag}[name="${cssEscapeValue(name)}"]`).length === 1) {
-          return `${tag}[name=${name}]`
-        }
-      } catch {
-                         
-      }
-    }
+    if (name) return `${tag}[name="${cssEscapeValue(name)}"]`
+    const testId = el.getAttribute('data-testid')
+    if (testId) return `${tag}[data-testid="${cssEscapeValue(testId)}"]`
+    const autocomplete = el.getAttribute('autocomplete')
+    if (autocomplete) return `${tag}[autocomplete="${cssEscapeValue(autocomplete)}"]`
     return getDomPathId(el)
   }
 
   function getDomPathId(el) {
     const parts = []
     let node = el
-    while (node && node.nodeType === 1 && parts.length < 5) {
+    while (node && node.nodeType === 1 && parts.length < DOM_PATH_DEPTH_MAX) {
       const tag = node.tagName.toLowerCase()
       if (node === document.body) {
         parts.unshift('body')
         break
       }
       let index = 1
+      let scanned = 0
       let sib = node.previousElementSibling
-      while (sib) {
+      while (sib && scanned < SIBLING_SCAN_MAX) {
         if (sib.tagName === node.tagName) index++
         sib = sib.previousElementSibling
+        scanned++
       }
-      parts.unshift(`${tag}[${index}]`)
+      parts.unshift(sib ? tag : `${tag}[${index}]`)
       node = node.parentElement
     }
     return parts.join('>') || 'unknown'
@@ -126,15 +152,39 @@
 
   function getFieldValue(el) {
     try {
-      if (el.isContentEditable) return el.textContent || ''
-      return el.value || ''
+      if (el.isContentEditable) return boundedText(el, VALUE_MAX, VALUE_NODE_MAX)
+      return String(el.value || '').slice(0, VALUE_MAX)
     } catch {
       return ''
     }
   }
 
   function clip(s) {
-    return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, LABEL_MAX)
+    return String(s == null ? '' : s)
+      .slice(0, LABEL_MAX * 4)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, LABEL_MAX)
+  }
+
+  function boundedText(root, charMax = LABEL_MAX, nodeMax = LABEL_NODE_MAX) {
+    if (!root) return ''
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    const parts = []
+    let chars = 0
+    let nodes = 0
+    let textNode
+    while ((textNode = walker.nextNode()) && nodes < nodeMax && chars < charMax * 4) {
+      nodes++
+      const parent = textNode.parentElement
+      const blocked = parent && parent.closest('script,style,input,textarea,select,svg,[contenteditable]')
+      if (blocked && blocked !== root) continue
+      const value = String(textNode.nodeValue || '').trim()
+      if (!value) continue
+      parts.push(value)
+      chars += value.length
+    }
+    return String(parts.join(' ')).replace(/\s+/g, ' ').trim().slice(0, charMax)
   }
 
      
@@ -142,21 +192,17 @@
                                                                                    
      
   function getFieldLabel(el) {
-                                                     
-    if (el.labels && el.labels.length) {
-      for (const lb of el.labels) {
-        const clone = lb.cloneNode(true)
-        clone.querySelectorAll('input,textarea,select,[contenteditable]').forEach((n) => n.remove())
-        const t = clip(clone.textContent)
-        if (t) return t
-      }
-    }
     const by = el.getAttribute('aria-labelledby')
     if (by) {
+      const root = el.getRootNode()
       const t = clip(
         by
           .split(/\s+/)
-          .map((id) => (document.getElementById(id) || { textContent: '' }).textContent)
+          .slice(0, 4)
+          .map((id) => {
+            const labelled = root && typeof root.getElementById === 'function' ? root.getElementById(id) : null
+            return boundedText(labelled || document.getElementById(id))
+          })
           .join(' '),
       )
       if (t) return t
@@ -170,6 +216,12 @@
     if (ph) {
       const t = clip(ph)
       if (t) return t
+    }
+    if (el.labels && el.labels.length) {
+      for (const label of Array.from(el.labels).slice(0, 3)) {
+        const t = boundedText(label)
+        if (t) return t
+      }
     }
     return findNearbyHint(el)
   }
@@ -186,7 +238,7 @@
     }
     for (const c of candidates) {
       if (NON_HINT_TAGS.includes(c.tagName.toLowerCase())) continue
-      const t = (c.textContent || '').replace(/\s+/g, ' ').trim()
+      const t = boundedText(c, 30, 24)
       if (t && t.length <= 30) return t               
     }
     return ''
@@ -207,7 +259,56 @@
   }
 
   function buildPageCtx() {
-    return { url: location.href, title: document.title, host: location.host }
+    return {
+      url: location.href.slice(0, PAGE_URL_MAX),
+      title: document.title.slice(0, PAGE_TITLE_MAX),
+      host: location.host,
+    }
+  }
+
+  function isLiveField(field) {
+    return !!field && field.isConnected && document.visibilityState === 'visible'
+  }
+
+  function markUserIntent(event) {
+    if (event && event.isTrusted === false) return
+    lastUserIntentAt = performance.now()
+  }
+
+  function hasRecentUserIntent() {
+    return lastUserIntentAt > 0 && performance.now() - lastUserIntentAt <= USER_INTENT_MAX_AGE_MS
+  }
+
+  function emitFieldFocus(field, force = false) {
+    if (!isLiveField(field)) return false
+    const message = { t: 'field-focus', field: buildFieldCtx(field), page: buildPageCtx() }
+    const signature = JSON.stringify(message)
+    if (!force && signature === lastContextSignature) return false
+    const wait = FOCUS_REPORT_MIN_MS - (performance.now() - lastFocusSentAt)
+    if (!force && wait > 0) {
+      clearTimeout(pendingFocusTimer)
+      pendingFocusTimer = setTimeout(() => {
+        pendingFocusTimer = 0
+        if (currentField === field) emitFieldFocus(field, true)
+      }, wait)
+      return false
+    }
+    lastContextSignature = signature
+    lastFocusSentAt = performance.now()
+    send(message)
+    return true
+  }
+
+  function clearCurrentField(reason) {
+    clearTimeout(inputTimer)
+    inputTimer = 0
+    clearTimeout(pendingFocusTimer)
+    pendingFocusTimer = 0
+    lastContextSignature = ''
+    if (!currentField) return
+    currentField = null
+    hideSuggest()
+    send({ t: 'field-blur', reason })
   }
 
                                                                                   
@@ -222,15 +323,15 @@
     if (!field) {
                           
       if (currentField) {
-        currentField = null
-        hideSuggest()
-        send({ t: 'field-blur' })
+        clearCurrentField('焦点离开输入框')
       }
       return
     }
-    if (field !== currentField) hideSuggest()
+    const changed = field !== currentField
+    if (changed) hideSuggest()
     currentField = field
-    send({ t: 'field-focus', field: buildFieldCtx(field), page: buildPageCtx() })
+    if (!hasRecentUserIntent()) return
+    emitFieldFocus(field)
   }
 
   function onFocusOut() {
@@ -238,22 +339,23 @@
                                        
     blurTimer = setTimeout(() => {
       blurTimer = 0
-      if (currentField) {
-        currentField = null
-        hideSuggest()
-        send({ t: 'field-blur' })
-      }
+      clearCurrentField('输入框失焦')
     }, BLUR_DELAY)
   }
 
                                          
   function onFieldInput(event) {
-    if (applyingFill || !currentField || event.target !== currentField) return
+    const path = typeof event.composedPath === 'function' ? event.composedPath() : []
+    if (applyingFill || !currentField || (event.target !== currentField && !path.includes(currentField))) return
+    markUserIntent(event)
     clearTimeout(inputTimer)
     inputTimer = setTimeout(() => {
       inputTimer = 0
-      if (!currentField || !document.contains(currentField)) return
-      send({ t: 'field-focus', field: buildFieldCtx(currentField), page: buildPageCtx() })
+      if (!isLiveField(currentField)) {
+        clearCurrentField('输入框已从页面移除')
+        return
+      }
+      emitFieldFocus(currentField)
     }, 180)
   }
 
@@ -261,7 +363,11 @@
 
   function handleFill(msg) {
     const field = currentField
-    if (!field || !document.contains(field)) return                           
+    if (!isLiveField(field)) {
+      clearCurrentField('填充时输入框不可用')
+      send({ t: 'fill-result', reqId: msg.reqId, ok: false, err: '输入框已失焦或离开页面' })
+      return
+    }
     if (!resolveTextField(field)) {
       currentField = null
       return
@@ -339,7 +445,10 @@
 
   function handleSuggest(msg) {
     const field = currentField
-    if (!field || !document.contains(field)) return
+    if (!isLiveField(field)) {
+      clearCurrentField('显示建议时输入框不可用')
+      return
+    }
     const items = Array.isArray(msg.items) ? msg.items.slice(0, SUGGEST_MAX) : []
     if (!items.length) {
       hideSuggest()
@@ -353,7 +462,7 @@
     const root = document.createElement('div')
     root.setAttribute('data-clipnest-overlay', '1')
     root.style.cssText = [
-      'position:absolute',
+      'position:fixed',
       `z-index:${OVERLAY_Z}`,
       'background:#ffffff',
       'color:#1f2329',
@@ -442,21 +551,32 @@
   }
 
   function positionOverlay(root, field) {
+    if (!root || !field || !field.isConnected) return
     const rect = field.getBoundingClientRect()
     const h = root.offsetHeight
     const w = root.offsetWidth
-    let y = rect.bottom + window.scrollY + 4
+    let y = rect.bottom + 4
                           
     if (rect.bottom + h + 8 > window.innerHeight && rect.top - h - 4 > 0) {
-      y = rect.top + window.scrollY - h - 4
+      y = rect.top - h - 4
     }
     const maxX = document.documentElement.clientWidth - w - 4
-    const x = Math.max(4, Math.min(rect.left + window.scrollX, Math.max(4, maxX)))
+    const x = Math.max(4, Math.min(rect.left, Math.max(4, maxX)))
     root.style.left = `${x}px`
     root.style.top = `${y}px`
   }
 
+  function scheduleOverlayPosition() {
+    if (!overlay.root || !overlay.field || positionFrame) return
+    positionFrame = requestAnimationFrame(() => {
+      positionFrame = 0
+      if (overlay.root && overlay.field) positionOverlay(overlay.root, overlay.field)
+    })
+  }
+
   function hideSuggest() {
+    if (positionFrame) cancelAnimationFrame(positionFrame)
+    positionFrame = 0
     if (overlay.root && overlay.root.parentNode) {
       overlay.root.parentNode.removeChild(overlay.root)
     }
@@ -470,6 +590,8 @@
   document.addEventListener('focusin', onFocusIn, true)
   document.addEventListener('focusout', onFocusOut, true)
   document.addEventListener('input', onFieldInput, true)
+  document.addEventListener('pointerdown', markUserIntent, true)
+  document.addEventListener('keydown', markUserIntent, true)
 
              
   document.addEventListener(
@@ -495,14 +617,18 @@
                       
   window.addEventListener(
     'scroll',
-    () => {
-      if (overlay.root && overlay.field) positionOverlay(overlay.root, overlay.field)
-    },
+    scheduleOverlayPosition,
     { passive: true },
   )
-  window.addEventListener('resize', () => {
-    if (overlay.root && overlay.field) positionOverlay(overlay.root, overlay.field)
+  window.addEventListener('resize', scheduleOverlayPosition)
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden') return
+    lastUserIntentAt = 0
+    clearCurrentField('页面已隐藏')
   })
+
+  window.addEventListener('pagehide', () => clearCurrentField('页面卸载'))
 
                          
   chrome.runtime.onMessage.addListener((msg) => {
