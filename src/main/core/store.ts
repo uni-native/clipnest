@@ -823,18 +823,7 @@ let singleton: ClipStore | null = null
                                                         
 export function initStore(): ClipStore {
   if (singleton) return singleton
-  let db: Database | null = null
-  try {
-    db = openDb()
-  } catch (e) {
-    console.error('[store] open db failed, fallback to in-memory', e)
-    try {
-      db = openDb(':memory:')
-    } catch (e2) {
-      console.error('[store] in-memory fallback failed, degraded store', e2)
-      db = null
-    }
-  }
+  const db = openDb()
   singleton = createStore(db)
   return singleton
 }

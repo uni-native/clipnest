@@ -1,9 +1,9 @@
-import { app, BrowserWindow, nativeTheme, screen } from 'electron'
+import { app, BrowserWindow, dialog, nativeTheme, screen } from 'electron'
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import '@main/core/appName'
-import { ensureDirs, imagesDir } from '@main/core/paths'
+import { dbPath, ensureDirs, imagesDir } from '@main/core/paths'
 import { initFileLogging } from '@main/core/logger'
 import { initStore } from '@main/core/store'
 import {
@@ -300,6 +300,10 @@ app.whenReady().then(async () => {
     }, delay)
     setTimeout(() => app.quit(), delay + 2500)
   }
+}).catch(error => {
+  console.error('[clipnest] startup failed', error)
+  dialog.showErrorBox('剪巢无法启动', `数据文件读取失败，请保留原文件并检查：\n${dbPath}`)
+  app.quit()
 })
 
 app.on('window-all-closed', () => {
