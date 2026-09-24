@@ -41,6 +41,8 @@ export interface WebManagerHandle {
 }
 
 let activeUrl = ''
+let activeServer: ReturnType<typeof createServer> | null = null
+let activePort = 0
 
 function headers(contentType: string): Record<string, string> {
   return {
@@ -315,19 +317,51 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ClipStore
 }
 
 export function startWebManager(deps: ManagerDeps): WebManagerHandle {
-  activeUrl = `http://${HOST}:${deps.port}`
   const server = createServer((req, res) => void route(req, res, deps.store))
-  server.on('error', e => console.error('[web-manager] server error', e))
-  server.listen(deps.port, HOST, () => console.log(`[web-manager] listening on ${activeUrl}`))
-  return {
-    url: activeUrl,
-    stop: () => {
+  activeServer = server
+  activePort = deps.port
+  server.on('error', e => {
+    console.error('[web-manager] server error', e)
+    if (activeServer === server) {
+      activeServer = null
+      activePort = 0
       activeUrl = ''
+    }
+  })
+  server.listen(deps.port, HOST, () => {
+    if (activeServer === server) {
+      activeUrl = `http://${HOST}:${deps.port}`
+      console.log(`[web-manager] listening on ${activeUrl}`)
+    }
+  })
+  return {
+    url: `http://${HOST}:${deps.port}`,
+    stop: () => {
+      if (activeServer === server) {
+        activeServer = null
+        activePort = 0
+        activeUrl = ''
+      }
       server.close(e => {
         if (e) console.error('[web-manager] stop failed', e)
       })
     },
   }
+}
+
+export function configureWebManager(store: ClipStore, enabled: boolean, port: number): void {
+  if (activeServer && (!enabled || port !== activePort)) {
+    const previous = activeServer
+    activeServer = null
+    activePort = 0
+    activeUrl = ''
+    previous.close(e => {
+      if (e) console.error('[web-manager] stop failed', e)
+      if (enabled) startWebManager({ store, port })
+    })
+    return
+  }
+  if (enabled && !activeServer) startWebManager({ store, port })
 }
 
 export function getWebManagerUrl(): string {

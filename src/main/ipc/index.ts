@@ -37,7 +37,7 @@ import {
   setShowOrHideHotkey,
 } from '@main/core/shortcuts'
 import { hidePanel, panelSize, setLayout, setTheme } from '@main/windows/panel'
-import { openWebManager } from '@main/web/manager'
+import { configureWebManager, openWebManager } from '@main/web/manager'
 
 export interface IpcDeps {
   store: ClipStore
@@ -187,6 +187,9 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle(IPC.updateSettings, (_e, patch: Record<string, unknown>) => {
     const prevSettings = store.getSettings()
     const next = store.saveSettings(patch)
+    if ('webManager' in patch && next.webManager) {
+      configureWebManager(store, next.webManager.enabled, next.webManager.port)
+    }
     panel.webContents.send(IPC.evtSettingsChanged, next)
                              
     const general = (patch as { general?: Record<string, unknown> }).general

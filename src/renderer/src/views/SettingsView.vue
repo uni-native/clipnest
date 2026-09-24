@@ -101,6 +101,19 @@ function patch(p: DeepPartial<Settings>): void {
   void store.update(p)
 }
 
+function onWebManagerEnabled(enabled: boolean): void {
+  patch({ webManager: { enabled } })
+}
+
+function onWebManagerPortChange(e: Event): void {
+  const port = Number((e.target as HTMLInputElement).value)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    tokenTip.value = '端口需在 1 到 65535 之间'
+    return
+  }
+  patch({ webManager: { port } })
+}
+
 function setTheme(t: ThemeType): void {
   patch({ clipboard: { theme: t } })
 }
@@ -1099,6 +1112,17 @@ onMounted(() => {
                   <span class="srow-grow"></span>
                   <span class="muted">网页版仅限本机访问</span>
                   <button class="pill-btn sm" type="button" @click="onOpenWebManager">打开管理页</button>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">网页版管理随软件启动</span>
+                  <div class="srow-ctrl">
+                    <Toggle :model-value="settings.webManager.enabled" @update:model-value="onWebManagerEnabled" />
+                  </div>
+                  <span class="srow-grow"></span>
+                  <span class="srow-label">管理页端口</span>
+                  <div class="srow-ctrl">
+                    <input class="ipt num" type="number" min="1" max="65535" :value="settings.webManager.port" @change="onWebManagerPortChange" />
+                  </div>
                 </div>
               </div>
             </div>
