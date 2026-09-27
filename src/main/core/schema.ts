@@ -3,7 +3,7 @@ import type { Database } from 'better-sqlite3'
                                                  
                                       
    
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
    
                                     
@@ -143,6 +143,10 @@ const MIGRATIONS: Migration[] = [
         END;
       `)
     },
+  },
+  {
+    version: 4,
+    up: (db) => db.exec("ALTER TABLE posts ADD COLUMN source_device TEXT"),
   },
 ]
 

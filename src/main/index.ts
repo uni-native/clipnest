@@ -27,8 +27,9 @@ import { createJevPipeline } from '@main/intelligence/jev'
 import { getDecisionBackend } from '@main/intelligence/onnx'
 import { createHub } from '@main/intelligence/hub'
 import { startWebManager, type WebManagerHandle } from '@main/web/manager'
+import { startLanSync, type LanSyncController } from '@main/sync'
 import { IPC } from '@shared/types'
-import type { CaptureEvent, ClipStore, NewPost, Settings } from '@shared/types'
+import type { CaptureEvent, ClipStore, NewPost, Settings, SyncStatus } from '@shared/types'
 
 const SMOKE = process.argv.includes('--smoke')
 
@@ -71,6 +72,7 @@ app.on('web-contents-created', (_e, contents) => {
 
 let store: ClipStore
 let capture: { stop(): void } | null = null
+let lanSync: LanSyncController | null = null
 let panelWindow: BrowserWindow | null = null
 let browserBridgeStop: (() => void) | null = null
 let webManager: WebManagerHandle | null = null
@@ -90,13 +92,37 @@ async function bootstrap(): Promise<void> {
   const panel = createPanelWindow()
   panelWindow = panel
   createSettingsWindow()
+  lanSync = startLanSync(
+    store,
+    (post, created) => {
+      try {
+        if (created) hub.indexPost(post)
+        panel.webContents.send(IPC.evtPostCaptured, {
+          post,
+          reason: created ? 'created' : 'touched',
+        })
+      } catch (e) {
+        console.error('[sync] publish received clipboard item failed', e)
+      }
+    },
+    (status: SyncStatus) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (win.isDestroyed()) continue
+        try {
+          win.webContents.send(IPC.evtSyncStatus, status)
+        } catch (e) {
+          console.error('[sync] broadcast status failed', e)
+        }
+      }
+    },
+  )
   if (settings.webManager.enabled) {
     webManager = startWebManager({ store, port: settings.webManager.port })
   }
   createTray(panel)
 
   const paste = createPasteEngine()
-  registerIpcHandlers({ store, panel, paste, hub })
+  registerIpcHandlers({ store, panel, paste, hub, sync: lanSync })
 
                                                    
   if (settings.browser.enabled) {
@@ -113,6 +139,7 @@ async function bootstrap(): Promise<void> {
 
                                         
   capture = startCapture(store, (e: CaptureEvent) => {
+    lanSync?.publish(e.post)
     if (e.reason === 'created') {
       hub.indexPost(e.post)
       panel.webContents.send(IPC.evtPostCaptured, e)
@@ -312,6 +339,8 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   capture?.stop()
+  lanSync?.stop()
+  lanSync = null
   browserBridgeStop?.()
   browserBridgeStop = null
   webManager?.stop()

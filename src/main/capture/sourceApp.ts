@@ -1,12 +1,8 @@
-import { load } from 'koffi'
-import type { IKoffiLib } from 'koffi'
+import { getPlatform } from '@main/platform'
 
                     
 const TITLE_MAX = 40
                                       
-const TEXT_BUF_CHARS = 512
-
-                                                              
 const KNOWN_APPS = [
   'visual studio code',
   'vs code',
@@ -60,40 +56,6 @@ const KNOWN_APPS = [
   'docker desktop',
 ]
 
-let user32: IKoffiLib | null = null
-let user32Failed = false
-let fgFn: (() => unknown) | null = null
-let titleFn: ((hwnd: unknown, buf: unknown, max: number) => unknown) | null = null
-
-function win32(): IKoffiLib | null {
-  if (user32Failed) return null
-  if (!user32) {
-    try {
-      user32 = load('user32.dll')
-    } catch (e) {
-      user32Failed = true
-      console.error('[capture] load user32.dll failed', e)
-    }
-  }
-  return user32
-}
-
-                              
-function resolveFns(): boolean {
-  if (fgFn && titleFn) return true
-  const lib = win32()
-  if (!lib) return false
-  try {
-    fgFn = () => lib.func('void* __stdcall GetForegroundWindow()')()
-    const getTitle = lib.func('int __stdcall GetWindowTextW(void* hWnd, void* lpString, int nMaxCount)')
-    titleFn = (hwnd, buf, max) => getTitle(hwnd, buf, max)
-    return true
-  } catch (e) {
-    console.error('[capture] resolve foreground functions failed', e)
-    return false
-  }
-}
-
 function isKnownApp(name: string): boolean {
   const lower = name.toLowerCase()
   return KNOWN_APPS.some(app => lower === app || lower.includes(app))
@@ -132,15 +94,9 @@ function truncate(s: string, max: number): string {
                                          
    
 export function getSourceApp(): string {
-  if (!resolveFns() || !fgFn || !titleFn) return ''
   try {
-    const hwnd = fgFn()
-    if (!hwnd) return ''
-    const buf = Buffer.alloc(TEXT_BUF_CHARS * 2)
-    const len = Number(titleFn(hwnd, buf, TEXT_BUF_CHARS))
-    if (!Number.isFinite(len) || len <= 0) return ''
-    const title = buf.toString('ucs2', 0, len * 2)
-    return appNameFromTitle(title)
+    const title = getPlatform().foregroundWindow()?.title
+    return title ? appNameFromTitle(title) : ''
   } catch (e) {
     console.error('[capture] read foreground window failed', e)
     return ''

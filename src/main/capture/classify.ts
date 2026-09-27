@@ -45,7 +45,7 @@ function isDirectory(p: string): boolean {
    
 export function classifySnapshot(snapshot: ClipboardSnapshot): ContentType {
   const { formats, filePath, imageDataUrl } = snapshot
-  if (formats.includes('image/png') && imageDataUrl) return 'image'
+  if (formats.some(format => format.toLowerCase() === 'image/png') && imageDataUrl) return 'image'
   if (filePath) {
     if (isDirectory(filePath)) return 'folder'
     if (IMAGE_EXTS.has(extname(filePath).toLowerCase())) return IMAGE_FILE_TYPE

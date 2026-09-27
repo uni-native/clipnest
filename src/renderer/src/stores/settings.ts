@@ -57,6 +57,13 @@ function fallbackSettings(): Settings {
         verificationCode: false,
       },
     },
+    sync: {
+      enabled: false,
+      port: 9379,
+      deviceId: '',
+      deviceName: '',
+      secret: '',
+    },
     webManager: {
       enabled: true,
       port: 9378,

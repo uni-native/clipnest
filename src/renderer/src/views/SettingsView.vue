@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import type { DeepPartial, IntelligenceStatus, ModelConfig, SensitiveFieldKind, Settings, ThemeType } from '@shared/types'
+import type { DeepPartial, IntelligenceStatus, ModelConfig, SensitiveFieldKind, Settings, SyncStatus, ThemeType } from '@shared/types'
 import { useSettingsStore } from '../stores/settings'
 import { api } from '../api/bridge'
 import { playClipboardSound, type ClipboardSoundKind } from '../utils/sound'
@@ -9,12 +9,13 @@ import Toggle from '../components/Toggle.vue'
 import HotkeyRecorder from '../components/HotkeyRecorder.vue'
 import ModelManagerModal from '../components/ModelManagerModal.vue'
 
-type SectionKey = 'clipboard' | 'shortcuts' | 'browser' | 'general' | 'intelligence'
+type SectionKey = 'clipboard' | 'shortcuts' | 'browser' | 'sync' | 'general' | 'intelligence'
 
 const NAV: Array<{ key: SectionKey; label: string; icon: string }> = [
   { key: 'clipboard', label: '剪切版', icon: 'clipboard' },
   { key: 'shortcuts', label: '快捷键', icon: 'keyboard' },
   { key: 'browser', label: '浏览器', icon: 'globe' },
+  { key: 'sync', label: '多端同步', icon: 'globe' },
   { key: 'general', label: '通用', icon: 'gear' },
   { key: 'intelligence', label: '智能', icon: 'spark' },
 ]
@@ -50,6 +51,8 @@ const { settings, browserStatus } = storeToRefs(store)
 const section = ref<SectionKey>('clipboard')
 const intel = ref<IntelligenceStatus | null>(null)
 const recError = ref('')
+const syncStatus = ref<SyncStatus | null>(null)
+const syncTip = ref('')
 const soundError = ref('')
 const copySoundInput = ref<HTMLInputElement | null>(null)
 const pasteSoundInput = ref<HTMLInputElement | null>(null)
@@ -73,22 +76,86 @@ const prevGroup = ref(settings.value.shortcutKeys.previousGroup)
 const nextGroup = ref(settings.value.shortcutKeys.nextGroup)
 
 let offIntel: (() => void) | null = null
+let offSync: (() => void) | null = null
 
 onMounted(() => {
   const init = sectionFromHash()
   if (init) section.value = init
   window.addEventListener('hashchange', onHashChange)
   void refreshIntel()
+  void refreshSyncStatus()
   void store.initBrowser()
   offIntel = window.clipnest.onIntelligenceStatus((s) => (intel.value = s))
+  offSync = window.clipnest.onSyncStatus((status) => (syncStatus.value = status))
 })
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', onHashChange)
   offIntel?.()
   offIntel = null
+  offSync?.()
+  offSync = null
 })
 
+async function refreshSyncStatus(): Promise<void> {
+  try {
+    syncStatus.value = await api.sync.status()
+  } catch (e) {
+    console.error('[settings] sync status failed', e)
+  }
+}
+
+const syncStateText = computed(() => {
+  if (!settings.value.sync.enabled) return '已关闭'
+  if (syncStatus.value?.lastError) return syncStatus.value.lastError
+  if (!syncStatus.value?.listening) return '正在启动'
+  const count = syncStatus.value.peers.filter(peer => peer.connected).length
+  return count > 0 ? count + ' 台设备已连接' : '等待局域网设备'
+})
+
+async function onSyncEnabled(enabled: boolean): Promise<void> {
+  syncTip.value = ''
+  if (enabled && settings.value.sync.secret.trim().length < 32) {
+    syncTip.value = '同步口令至少需要 32 个字符'
+    return
+  }
+  if (!await store.update({ sync: { enabled } })) syncTip.value = '同步设置保存失败'
+}
+
+async function onSyncNameChange(event: Event): Promise<void> {
+  const deviceName = (event.target as HTMLInputElement).value.trim()
+  if (deviceName.length < 1 || deviceName.length > 48) {
+    syncTip.value = '设备名称需在 1 到 48 个字符之间'
+    return
+  }
+  syncTip.value = ''
+  if (!await store.update({ sync: { deviceName } })) syncTip.value = '设备名称保存失败'
+}
+
+async function onSyncPortChange(event: Event): Promise<void> {
+  const port = Number((event.target as HTMLInputElement).value)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    syncTip.value = '端口需在 1 到 65535 之间'
+    return
+  }
+  syncTip.value = ''
+  if (!await store.update({ sync: { port } })) syncTip.value = '同步端口保存失败'
+}
+
+async function onSyncSecretChange(event: Event): Promise<void> {
+  const secret = (event.target as HTMLInputElement).value.trim()
+  if (secret.length < 32) {
+    syncTip.value = '同步口令至少需要 32 个字符'
+    return
+  }
+  syncTip.value = ''
+  if (!await store.update({ sync: { secret } })) syncTip.value = '同步口令保存失败'
+}
+
+async function onCopySyncSecret(): Promise<void> {
+  const secret = settings.value.sync.secret
+  syncTip.value = secret && await copyText(secret) ? '同步口令已复制' : '同步口令复制失败'
+}
 async function refreshIntel(): Promise<void> {
   try {
     intel.value = await api.intelligence.status()
@@ -1061,7 +1128,64 @@ onMounted(() => {
         </section>
 
                                                                               
-        <section v-show="section === 'browser'" class="pane-grid single page-browser">
+                <section v-show="section === 'sync'" class="pane-grid single page-sync">
+          <div class="col">
+            <div class="card card-sync">
+              <div class="card-head">
+                <div class="card-heading">
+                  <span class="card-dot" style="background: #726cff"></span>
+                  <span class="card-title">局域网剪贴板同步</span>
+                </div>
+                <div class="header-toggle">
+                  <span>{{ syncStateText }}</span>
+                  <Toggle :model-value="settings.sync.enabled" @update:model-value="onSyncEnabled" />
+                </div>
+              </div>
+              <div class="brow-rows">
+                <div class="srow">
+                  <span class="srow-label">设备名称</span>
+                  <div class="srow-ctrl">
+                    <input class="ipt" type="text" maxlength="48" :value="settings.sync.deviceName" @change="onSyncNameChange" />
+                  </div>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">同步端口</span>
+                  <div class="srow-ctrl">
+                    <input class="ipt num" type="number" min="1" max="65535" :value="settings.sync.port" @change="onSyncPortChange" />
+                  </div>
+                  <span class="srow-grow"></span>
+                  <span class="muted">设备需使用相同端口并允许局域网防火墙连接</span>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">同步口令</span>
+                  <div class="srow-ctrl brow-token">
+                    <input class="ipt mono" type="text" maxlength="128" :value="settings.sync.secret" @change="onSyncSecretChange" />
+                    <button class="pill-btn sm" type="button" @click="onCopySyncSecret">复制</button>
+                  </div>
+                </div>
+                <div class="srow peer-heading">
+                  <span class="srow-label">局域网设备</span>
+                  <span class="srow-grow"></span>
+                  <span class="muted">{{ syncStatus?.peers.filter(peer => peer.connected).length ?? 0 }} 台已连接</span>
+                </div>
+                <div v-if="!syncStatus?.peers.length" class="sync-empty">未发现使用相同口令的设备</div>
+                <div v-else class="sync-peers">
+                  <div v-for="peer in syncStatus.peers" :key="peer.deviceId" class="sync-peer">
+                    <span class="sync-peer-name">{{ peer.deviceName }}</span>
+                    <span class="muted">{{ peer.address }}:{{ peer.port }}</span>
+                    <span class="sync-peer-state" :class="{ connected: peer.connected }">{{ peer.connected ? '已连接' : '等待连接' }}</span>
+                  </div>
+                </div>
+                <div class="srow card-footer-row">
+                  <span class="token-tip">{{ syncTip || syncStatus?.lastError || '文本、链接和图片单项不超过 4 MiB，文件与文件夹仍留在本机' }}</span>
+                  <span class="srow-grow"></span>
+                  <span class="muted">{{ settings.shortcutKeys.showOrHide }} 打开剪贴板，来源显示在条目右下角</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+<section v-show="section === 'browser'" class="pane-grid single page-browser">
           <div class="col">
                             
             <div class="card card-browser">
@@ -1234,6 +1358,9 @@ onMounted(() => {
   flex: 1.12 1 0;
   overflow-y: auto;
 }
+.page-sync > .col > .card.card-sync {
+  padding: 16px 20px;
+}
                      
 .card-browser,
 .card-jev {
@@ -1378,6 +1505,47 @@ onMounted(() => {
 }
 .sensitive-tip {
   margin-top: 8px;
+}
+
+.sync-empty {
+  padding: 12px 0;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.sync-peers {
+  max-height: 130px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-2);
+}
+.sync-peer {
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-2);
+  font-size: 11.5px;
+}
+.sync-peer-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sync-peer-state {
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.sync-peer-state.connected {
+  color: #22a06b;
+}
+.page-sync .card-footer-row {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-2);
+}
+.page-sync .card-footer-row .muted {
+  white-space: nowrap;
 }
 
                                       

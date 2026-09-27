@@ -14,6 +14,7 @@ import type {
   PostPage,
   PostQuery,
   Settings,
+  SyncStatus,
   ThemeType,
 } from '@shared/types'
 
@@ -92,6 +93,7 @@ const bridge: ClipNestBridge = {
     invoke<BrowserStatus>(IPC.browserSetConfig, patch),
   browserRegenerateToken: () => invoke<string>(IPC.browserRegenerateToken),
   browserPing: () => invoke<boolean>(IPC.browserPing),
+  syncStatus: () => invoke<SyncStatus>(IPC.syncStatus),
 
               
   onPostCaptured: cb =>
@@ -108,6 +110,7 @@ const bridge: ClipNestBridge = {
   onModelDownload: cb =>
     subscribe(IPC.evtModelDownload, (s: ModelDownloadInfo) => cb(s)),
   onBrowserStatus: cb => subscribe(IPC.evtBrowserStatus, (s: BrowserStatus) => cb(s)),
+  onSyncStatus: cb => subscribe(IPC.evtSyncStatus, (s: SyncStatus) => cb(s)),
 }
 
 contextBridge.exposeInMainWorld('clipnest', bridge)

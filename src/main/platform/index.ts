@@ -1,4 +1,5 @@
 import { clipboard, nativeImage } from 'electron'
+import { createLinuxAdapter } from './linux'
 import type { ClipboardSnapshot, ForegroundWindow, PlatformAdapter } from '@shared/types'
 import {
   CF_HDROP,
@@ -131,6 +132,7 @@ function restoreForeground(handle: number): void {
 function createWin32Adapter(): PlatformAdapter {
   return {
     platform: 'win32',
+    clipboardPollIntervalMs: 80,
     clipboardSequenceNumber: () => getWin32().GetClipboardSequenceNumber(),
     readClipboard: () => {
       const formats = clipboard.availableFormats()
@@ -184,6 +186,7 @@ function darwinStub(): PlatformAdapter {
   }
   return {
     platform: 'darwin',
+    clipboardPollIntervalMs: 250,
     clipboardSequenceNumber: fail,
     readClipboard: fail,
     foregroundWindow: fail,
@@ -198,7 +201,10 @@ function darwinStub(): PlatformAdapter {
 }
 
 export function getPlatform(): PlatformAdapter {
-  if (process.platform !== 'win32') return darwinStub()
-  if (!adapter) adapter = createWin32Adapter()
+  if (!adapter) {
+    if (process.platform === 'win32') adapter = createWin32Adapter()
+    else if (process.platform === 'linux') adapter = createLinuxAdapter()
+    else adapter = darwinStub()
+  }
   return adapter
 }

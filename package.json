@@ -1,6 +1,7 @@
 {
   "name": "clipnest",
   "productName": "剪巢",
+  "desktopName": "com.clipnest.app.desktop",
   "version": "0.1.0",
   "description": "剪巢 ClipNest —— 本地优先的智能剪贴板管理器",
   "main": "./out/main/index.js",
@@ -11,6 +12,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist:win": "electron-vite build && electron-builder --win nsis portable --x64",
+    "dist:linux": "electron-vite build && electron-builder --linux AppImage deb --x64 --arm64",
     "pack:win": "electron-vite build && electron-builder --win --x64 --dir",
     "test:intelligence": "node --no-warnings --experimental-strip-types scripts/test-intelligence.mjs",
     "preview": "electron-vite preview",
@@ -77,6 +79,23 @@
     },
     "portable": {
       "artifactName": "ClipNest-Portable-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "artifactName": "ClipNest-${version}-${arch}.${ext}",
+      "icon": "resources/icon.png",
+      "category": "Utility",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "depends": ["xdotool"],
+      "syncDesktopName": true
     }
   }
 }

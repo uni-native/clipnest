@@ -3,12 +3,12 @@
 
   <h1>剪巢 ClipNest</h1>
 
-  <p><strong>本地优先的 Windows 智能剪贴板</strong></p>
+  <p><strong>本地优先的智能剪贴板</strong></p>
   <p>让复制过的内容自动归巢，需要时快速找到，并安全地填入网页表单。</p>
 
   <p>
     <img src="https://img.shields.io/badge/version-0.1.0-6F66F6" alt="版本 0.1.0">
-    <img src="https://img.shields.io/badge/platform-Windows%2011-0078D4" alt="Windows 11">
+    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D4" alt="Windows and Linux">
     <img src="https://img.shields.io/badge/Electron-38-47848F" alt="Electron 38">
     <img src="https://img.shields.io/badge/license-MIT-38B77D" alt="MIT License">
     <img src="https://img.shields.io/badge/data-local--first-28263B" alt="Local First">
@@ -40,7 +40,8 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 
 | 能力 | 说明 |
 |---|---|
-| 自动收集 | 仅在 Windows 剪贴板发生变化时读取内容，支持文本、链接、图片、文件和文件夹 |
+| 自动收集 | Windows 与 Linux 自动读取剪贴板，支持文本、链接、图片、文件和文件夹 |
+| 局域网同步 | Windows 与 Linux 设备可加密同步文本、链接和图片，文件与文件夹保留在本机 |
 | 内容去重 | 使用内容哈希复用已有记录，重复复制只更新热度与最近使用时间 |
 | 快速搜索 | 基于 SQLite FTS5 的本地全文搜索，长时间使用仍保持稳定分页性能 |
 | 快捷粘贴 | 支持全局呼出、数字快捷粘贴与最多 9 项的顺序粘贴队列 |
@@ -85,6 +86,7 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 ### 系统要求
 
 - Windows 11 x64
+- Linux x64 或 ARM64，当前粘贴注入需 X11 与 `xdotool`
 - Node.js 22 或更高版本，仅源码开发需要
 - Edge 或 Chrome，仅浏览器智能填充需要
 
@@ -108,7 +110,15 @@ npm run dev
 npm run dist:win
 ```
 
-项目不使用 Docker，所有依赖均在 Windows 原生环境运行。
+Linux x64 与 ARM64 可在对应 Linux 构建环境中生成 AppImage 和 deb：
+
+```bash
+npm run dist:linux
+```
+
+deb 会声明安装 `xdotool`。使用 AppImage 时需自行安装 `xdotool`。当前 Linux 粘贴按键注入面向 X11；Wayland 下快捷键需要桌面提供 GlobalShortcuts portal，粘贴注入暂不可用。单条同步内容上限为 4 MiB。
+
+项目不使用 Docker，Windows 与 Linux 均在原生环境运行。
 
 ## 基本使用
 
@@ -158,7 +168,7 @@ npm run dist:win
 - 网页管理和浏览器桥接只监听 `127.0.0.1`。
 - 浏览器扩展自身不发起外部请求。
 - 敏感字段默认拒绝填充；逐项开启后仍由扩展和桌面端双重校验。
-- 外部网络仅用于更新检查，以及用户主动触发的模型下载。
+- 外部网络仅用于更新检查，以及用户主动触发的模型下载；局域网同步只连接使用相同口令的本地设备。
 
 默认数据目录：
 
@@ -243,7 +253,7 @@ node --check chrom-extension/popup.js
 
 ## 当前边界
 
-- 当前正式支持 Windows 11 x64，macOS 适配尚未实现。
+- 当前正式支持 Windows 11 x64 与 Linux x64、ARM64；macOS 适配尚未实现。
 - 浏览器扩展需要手动以开发者模式加载，尚未发布到扩展商店。
 - 多文件剪贴板目前按 Windows `FileNameW` 行为读取第一个路径。
 - 本地模型下载需要能够访问对应的模型来源，下载失败不影响规则匹配。
