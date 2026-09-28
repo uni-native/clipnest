@@ -134,6 +134,9 @@ async function togglePin(): Promise<void> {
         </span>
         <span class="pc-src">{{ sourceName }}</span>
         <span class="pc-time">{{ relTime }}</span>
+        <span v-if="post.sourceDevice" class="pc-device" :title="'来自 ' + post.sourceDevice">
+          来自 {{ post.sourceDevice }}
+        </span>
       </div>
     </template>
 
@@ -155,6 +158,9 @@ async function togglePin(): Promise<void> {
           </span>
           <span class="pc-src">{{ sourceName }}</span>
           <span class="pc-time">{{ relTime }}</span>
+          <span v-if="post.sourceDevice" class="pc-device" :title="'来自 ' + post.sourceDevice">
+            来自 {{ post.sourceDevice }}
+          </span>
         </div>
       </div>
     </template>

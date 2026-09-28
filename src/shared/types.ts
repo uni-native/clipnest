@@ -94,6 +94,7 @@ export interface Post {
   size: number
                   
   sourceApp: string
+  sourceDevice: string | null
   groupId: string | null
   tags: string[]
   pinned: number
@@ -113,6 +114,7 @@ export interface NewPost {
   contentPath: string | null
   size: number
   sourceApp: string
+  sourceDevice?: string | null
   groupId: string | null
   tags?: string[]
 }
@@ -224,6 +226,13 @@ export interface Settings {
     sensitiveFill: SensitiveFillSettings
   }
                                
+  sync: {
+    enabled: boolean
+    port: number
+    deviceId: string
+    deviceName: string
+    secret: string
+  }
   webManager: {
     enabled: boolean
     port: number
@@ -330,6 +339,13 @@ export const DEFAULT_SETTINGS: Settings = {
       verificationCode: false,
     },
   },
+  sync: {
+    enabled: false,
+    port: 9379,
+    deviceId: '',
+    deviceName: '',
+    secret: '',
+  },
   webManager: {
     enabled: true,
     port: 9378,
@@ -368,9 +384,10 @@ export interface ForegroundWindow {
 }
 
 export interface PlatformAdapter {
-  readonly platform: 'win32' | 'darwin'
+  readonly platform: 'win32' | 'darwin' | 'linux'
                                                      
-  clipboardSequenceNumber(): number
+  clipboardPollIntervalMs: number
+  clipboardSequenceNumber(): number | null
                     
   readClipboard(): ClipboardSnapshot
   foregroundWindow(): ForegroundWindow | null
@@ -555,6 +572,7 @@ export const IPC = {
   browserSetConfig: 'browser:set-config',
   browserRegenerateToken: 'browser:regenerate-token',
   browserPing: 'browser:ping',
+  syncStatus: 'sync:status',
   readImageDataUrl: 'content:read-image',
                                   
   evtPostCaptured: 'event:post-captured',
@@ -568,7 +586,38 @@ export const IPC = {
   evtIntelligenceStatus: 'event:intelligence-status',
   evtModelDownload: 'event:model-download',
   evtBrowserStatus: 'event:browser-status',
+  evtSyncStatus: 'event:sync-status',
 } as const
+
+export interface SyncedPostPayload {
+  originDeviceId: string
+  originDeviceName: string
+  postId: string
+  hash: string
+  type: 'text' | 'link' | 'image'
+  title: string
+  preview: string
+  sourceApp: string
+  format: 'text' | 'html' | 'image'
+  content: string
+}
+
+export interface SyncPeer {
+  deviceId: string
+  deviceName: string
+  address: string
+  port: number
+  connected: boolean
+}
+
+export interface SyncStatus {
+  enabled: boolean
+  listening: boolean
+  port: number
+  deviceName: string
+  peers: SyncPeer[]
+  lastError: string | null
+}
 
                                                                                              
 
@@ -638,6 +687,7 @@ export interface ClipNestBridge {
   browserSetConfig(patch: DeepPartial<Settings['browser']>): Promise<BrowserStatus>
   browserRegenerateToken(): Promise<string>
   browserPing(): Promise<boolean>
+  syncStatus(): Promise<SyncStatus>
                                                         
   readImageDataUrl(path: string): Promise<string | null>
                        
@@ -652,6 +702,7 @@ export interface ClipNestBridge {
   onIntelligenceStatus(cb: (s: IntelligenceStatus) => void): () => void
   onModelDownload(cb: (s: ModelDownloadInfo) => void): () => void
   onBrowserStatus(cb: (s: BrowserStatus) => void): () => void
+  onSyncStatus(cb: (s: SyncStatus) => void): () => void
 }
 
 declare global {

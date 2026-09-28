@@ -38,16 +38,18 @@ import {
 } from '@main/core/shortcuts'
 import { hidePanel, panelSize, setLayout, setTheme } from '@main/windows/panel'
 import { configureWebManager, openWebManager } from '@main/web/manager'
+import type { LanSyncController } from '@main/sync'
 
 export interface IpcDeps {
   store: ClipStore
   panel: BrowserWindow
   paste: PasteEngine
   hub: IntelligenceHub
+  sync: LanSyncController
 }
 
 export function registerIpcHandlers(deps: IpcDeps): void {
-  const { store, panel, paste, hub } = deps
+  const { store, panel, paste, hub, sync } = deps
 
                                                   
   bindModelsRoot(modelsDir)
@@ -190,6 +192,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     if ('webManager' in patch && next.webManager) {
       configureWebManager(store, next.webManager.enabled, next.webManager.port)
     }
+    if ('sync' in patch) sync.configure(next.sync)
     panel.webContents.send(IPC.evtSettingsChanged, next)
                              
     const general = (patch as { general?: Record<string, unknown> }).general
@@ -224,6 +227,22 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       JSON.stringify(prevActive ?? null) !== JSON.stringify(nextActive ?? null)
     if (activeChanged) void applyActiveModel(next)
     return next
+  })
+  ipcMain.handle(IPC.syncStatus, () => {
+    try {
+      return sync.getStatus()
+    } catch (e) {
+      console.error('[ipc] syncStatus failed', e)
+      const settings = store.getSettings().sync
+      return {
+        enabled: settings.enabled,
+        listening: false,
+        port: settings.port,
+        deviceName: settings.deviceName,
+        peers: [],
+        lastError: '无法读取同步状态',
+      }
+    }
   })
   ipcMain.handle(IPC.updateShowHideHotkey, (_e, key: string) =>
     setShowOrHideHotkey(panel, key),

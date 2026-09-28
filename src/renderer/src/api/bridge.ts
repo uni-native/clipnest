@@ -11,6 +11,7 @@ import type {
   PostPage,
   PostQuery,
   Settings,
+  SyncStatus,
   ThemeType,
 } from '@shared/types'
 
@@ -67,6 +68,9 @@ export const api = {
     modelStatus: (): Promise<ModelStatusInfo> => bridge.intelligenceModelStatus(),
     downloadModel: (modelId: string): Promise<ModelDownloadResult> =>
       bridge.intelligenceModelDownload(modelId),
+  },
+  sync: {
+    status: (): Promise<SyncStatus> => bridge.syncStatus(),
   },
   browser: {
     status: (): Promise<BrowserStatus> => bridge.browserStatus(),

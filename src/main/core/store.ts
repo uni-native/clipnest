@@ -30,6 +30,7 @@ interface PostRow {
   content_path: string | null
   size: number
   source_app: string
+  source_device: string | null
   group_id: string | null
   tags: string
   pinned: number
@@ -68,10 +69,11 @@ const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 200
 const SETTINGS_ROW_ID = 1
 
-const POST_INSERT_HEAD = `INSERT INTO posts (id, hash, type, title, preview, content_path, size, source_app, group_id, tags, pinned, created_at, last_used_at, use_count)
-  VALUES (@id, @hash, @type, @title, @preview, @contentPath, @size, @sourceApp, @groupId, @tags, 0, @createdAt, @lastUsedAt, 1)`
+const POST_INSERT_HEAD = `INSERT INTO posts (id, hash, type, title, preview, content_path, size, source_app, source_device, group_id, tags, pinned, created_at, last_used_at, use_count)
+  VALUES (@id, @hash, @type, @title, @preview, @contentPath, @size, @sourceApp, @sourceDevice, @groupId, @tags, 0, @createdAt, @lastUsedAt, 1)`
 const SQL_INSERT_POST = `${POST_INSERT_HEAD}
-  ON CONFLICT(hash) DO UPDATE SET last_used_at = excluded.last_used_at, use_count = use_count + 1`
+  ON CONFLICT(hash) DO UPDATE SET last_used_at = excluded.last_used_at, use_count = use_count + 1,
+  source_device = COALESCE(posts.source_device, excluded.source_device)`
 const SQL_IMPORT_POST = `${POST_INSERT_HEAD} ON CONFLICT(hash) DO NOTHING`
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
@@ -113,6 +115,7 @@ function toPost(r: PostRow): Post {
     contentPath: r.content_path,
     size: r.size,
     sourceApp: r.source_app,
+    sourceDevice: r.source_device,
     groupId: r.group_id,
     tags: parseTags(r.tags),
     pinned: r.pinned,
@@ -353,6 +356,7 @@ function syntheticPost(input: NewPost): Post {
     contentPath: input.contentPath ?? null,
     size: typeof input.size === 'number' ? input.size : 0,
     sourceApp: typeof input.sourceApp === 'string' ? input.sourceApp : '',
+    sourceDevice: input.sourceDevice ?? null,
     groupId: null,
     tags: normalizeTags(input.tags),
     pinned: 0,
@@ -376,6 +380,7 @@ function createTxs(db: Database, S: Stmts): Txs {
     contentPath: input.contentPath ?? null,
     size: typeof input.size === 'number' && Number.isFinite(input.size) ? input.size : 0,
     sourceApp: typeof input.sourceApp === 'string' ? input.sourceApp : '',
+    sourceDevice: input.sourceDevice ?? null,
     groupId: resolveGroupId(S, input.groupId),
     tags: JSON.stringify(normalizeTags(input.tags)),
     createdAt: now,
