@@ -9,6 +9,9 @@ import { startDiscovery, type DiscoveryHandle } from './discovery'
 
 const MAX_WS_PAYLOAD_BYTES = 8 * 1024 * 1024
 const PEER_TIMEOUT_MS = 15_000
+const AUTH_TIMEOUT_MS = 5_000
+const MAX_PENDING_SESSIONS = 32
+const MAX_PENDING_PER_ADDRESS = 4
 const SWEEP_INTERVAL_MS = 2500
 const SEEN_LIMIT = 2048
 const DEVICE_ID_PATTERN = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
@@ -24,6 +27,7 @@ interface SocketSession {
   address: string
   expectedDeviceId: string | null
   peer: PeerRecord | null
+  authTimer: ReturnType<typeof setTimeout>
 }
 
 interface WireHello {
@@ -223,7 +227,17 @@ class LanSyncService implements LanSyncController {
   }
 
   private attachSocket(socket: WebSocket, address: string, expectedDeviceId: string | null): void {
-    const session: SocketSession = { socket, address, expectedDeviceId, peer: null }
+    const pending = [...this.sessions.values()].filter(session => !session.peer)
+    if (pending.length >= MAX_PENDING_SESSIONS
+      || pending.filter(session => session.address === address).length >= MAX_PENDING_PER_ADDRESS) {
+      socket.on('error', error => this.reportError('同步连接被拒绝后发生错误', error))
+      socket.terminate()
+      return
+    }
+    const authTimer = setTimeout(() => {
+      if (!session.peer) socket.terminate()
+    }, AUTH_TIMEOUT_MS)
+    const session: SocketSession = { socket, address, expectedDeviceId, peer: null, authTimer }
     this.sessions.set(socket, session)
     socket.on('open', () => this.sendHello(session))
     socket.on('message', (data, binary) => this.receiveMessage(session, data, binary))
@@ -292,6 +306,7 @@ class LanSyncService implements LanSyncController {
     peer.authenticated = true
     peer.lastSeen = Date.now()
     session.peer = peer
+    clearTimeout(session.authTimer)
     this.clearError()
     this.emitStatus()
     console.log('[sync] peer connected', peer.deviceName, peer.address)
@@ -411,6 +426,7 @@ class LanSyncService implements LanSyncController {
   }
 
   private removeSession(session: SocketSession): void {
+    clearTimeout(session.authTimer)
     this.sessions.delete(session.socket)
     const peer = session.peer
     if (peer && peer.socket === session.socket) {
@@ -448,7 +464,10 @@ class LanSyncService implements LanSyncController {
     this.discovery = null
     if (this.sweep) clearInterval(this.sweep)
     this.sweep = null
-    for (const session of this.sessions.values()) session.socket.terminate()
+    for (const session of this.sessions.values()) {
+      clearTimeout(session.authTimer)
+      session.socket.terminate()
+    }
     this.sessions.clear()
     this.peers.clear()
     this.key = null

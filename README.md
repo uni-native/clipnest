@@ -86,7 +86,7 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 ### 系统要求
 
 - Windows 11 x64
-- Linux x64 或 ARM64，粘贴注入支持 X11 与 Hyprland
+- Linux x64 或 ARM64。X11 自动粘贴需要 `xdotool`；Hyprland 自动粘贴和面板定位需要 `hyprctl`
 - Node.js 22 或更高版本，仅源码开发需要
 - Edge 或 Chrome，仅浏览器智能填充需要
 
@@ -116,7 +116,7 @@ Linux x64 与 ARM64 可在对应 Linux 构建环境中生成 AppImage 和 deb：
 npm run dist:linux
 ```
 
-deb 会声明安装 `xdotool`。使用 AppImage 时，X11 需自行安装 `xdotool`；Hyprland 会通过 `hyprctl` 向上一个前台窗口发送粘贴快捷键。其他 Wayland 合成器的粘贴注入暂不可用。Wayland 下全局快捷键需要桌面提供 GlobalShortcuts portal。单条同步内容上限为 4 MiB。
+deb 会声明安装 `xdotool`。使用 AppImage 时，X11 需自行安装 `xdotool`。启动时会检查所需工具；缺少时会提示一次，自动粘贴和窗口来源识别不可用，剪贴板收集仍可使用。X11 使用 `xdotool`；Omarchy 等 Hyprland 桌面使用 `hyprctl` 定位剪贴板面板、识别窗口并向目标窗口发送粘贴快捷键。其他原生 Wayland 桌面暂不支持窗口识别、定位和模拟粘贴；XWayland 下 `xdotool` 只能操作 X11 窗口。Wayland 全局快捷键还需要桌面提供 GlobalShortcuts portal。X11 剪贴板所有者提供 TIMESTAMP 时，重复复制相同内容也会更新记录，并避免反复读取未变化的图片；不提供该标记时仍按内容变化检测。单条同步内容上限为 4 MiB。
 
 项目不使用 Docker，Windows 与 Linux 均在原生环境运行。
 

@@ -4,6 +4,7 @@ import { IPC, DEFAULT_SETTINGS } from '@shared/types'
 import type { ClipStore, Layout, Settings, ThemeType } from '@shared/types'
 import { initStore } from '@main/core/store'
 import { loadAppIcon } from '@main/windows/icon'
+import { isHyprlandSession, placeHyprlandPanel } from '@main/platform/hyprland'
 
                 
 const PANEL_WIDTH = 290
@@ -61,6 +62,7 @@ export function createPanelWindow(store?: ClipStore): BrowserWindow {
   if (store) bindShellStore(store)
 
   const win = new BrowserWindow({
+    title: 'ClipNest Panel',
     width: PANEL_WIDTH,
     height: 700,
     icon: loadAppIcon(),
@@ -70,7 +72,7 @@ export function createPanelWindow(store?: ClipStore): BrowserWindow {
     hasShadow: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: isHyprlandSession(),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -86,6 +88,7 @@ export function createPanelWindow(store?: ClipStore): BrowserWindow {
 
                                
   win.on('blur', () => hidePanel(win))
+  win.on('page-title-updated', event => event.preventDefault())
 
   win.loadFile(RENDERER_HTML).catch(err => {
     console.error('[clipnest] 面板加载渲染产物失败', err)
@@ -111,6 +114,9 @@ export function showPanel(win: BrowserWindow): void {
   const layout = currentLayout()
   applyLayout(win, layout)
   win.show()
+  void placeHyprlandPanel(win.getTitle(), layout, PANEL_WIDTH, PANEL_HEIGHT).catch(err => {
+    console.error('[clipnest] Hyprland 面板定位失败', err)
+  })
   win.focus()
   try {
     win.webContents.send(IPC.evtShow, layout)
@@ -152,6 +158,11 @@ export function setLayout(win: BrowserWindow, layout: Layout): { layout: Layout 
     console.error('[clipnest] 保存布局失败', err)
   }
   applyLayout(win, layout)
+  if (win.isVisible()) {
+    void placeHyprlandPanel(win.getTitle(), layout, PANEL_WIDTH, PANEL_HEIGHT).catch(err => {
+      console.error('[clipnest] Hyprland 面板布局失败', err)
+    })
+  }
   return { layout }
 }
 
