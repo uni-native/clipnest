@@ -86,7 +86,7 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 ### 系统要求
 
 - Windows 11 x64
-- Linux x64 或 ARM64，当前粘贴注入需 X11 与 `xdotool`
+- Linux x64 或 ARM64，粘贴注入支持 X11 与 Hyprland
 - Node.js 22 或更高版本，仅源码开发需要
 - Edge 或 Chrome，仅浏览器智能填充需要
 
@@ -116,7 +116,7 @@ Linux x64 与 ARM64 可在对应 Linux 构建环境中生成 AppImage 和 deb：
 npm run dist:linux
 ```
 
-deb 会声明安装 `xdotool`。使用 AppImage 时需自行安装 `xdotool`。当前 Linux 粘贴按键注入面向 X11；Wayland 下快捷键需要桌面提供 GlobalShortcuts portal，粘贴注入暂不可用。单条同步内容上限为 4 MiB。
+deb 会声明安装 `xdotool`。使用 AppImage 时，X11 需自行安装 `xdotool`；Hyprland 会通过 `hyprctl` 向上一个前台窗口发送粘贴快捷键。其他 Wayland 合成器的粘贴注入暂不可用。Wayland 下全局快捷键需要桌面提供 GlobalShortcuts portal。单条同步内容上限为 4 MiB。
 
 项目不使用 Docker，Windows 与 Linux 均在原生环境运行。
 

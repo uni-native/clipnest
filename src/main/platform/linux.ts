@@ -5,9 +5,19 @@ import type { ClipboardSnapshot, ForegroundWindow, PlatformAdapter } from '@shar
 
 const POLL_INTERVAL_MS = 250
 const FOREGROUND_POLL_MS = 300
+const HYPRLAND_WINDOW_HANDLE = 1
+const isHyprlandWayland = Boolean(process.env.HYPRLAND_INSTANCE_SIGNATURE)
 let lastExternalHandle: number | null = null
+let lastExternalAddress: string | null = null
+let pasteTargetAddress: string | null = null
 let foregroundTimer: ReturnType<typeof setInterval> | null = null
 let foregroundErrorReported = false
+
+interface HyprlandWindow {
+  address: string
+  pid: number
+  title: string
+}
 
 function runXdotool(args: string[], reportError = true): string {
   try {
@@ -15,6 +25,23 @@ function runXdotool(args: string[], reportError = true): string {
   } catch (e) {
     if (reportError) console.error('[platform:linux] xdotool command failed', args, e)
     throw e
+  }
+}
+
+function runHyprctl(args: string[]): string {
+  return execFileSync('hyprctl', args, { encoding: 'utf8' }).trim()
+}
+
+function readHyprlandActiveWindow(): HyprlandWindow | null {
+  const raw: unknown = JSON.parse(runHyprctl(['activewindow', '-j']))
+  if (typeof raw !== 'object' || raw === null) return null
+  const data = raw as Record<string, unknown>
+  if (typeof data.address !== 'string' || !/^0x[0-9a-f]+$/i.test(data.address)) return null
+  if (typeof data.pid !== 'number' || !Number.isSafeInteger(data.pid)) return null
+  return {
+    address: data.address,
+    pid: data.pid,
+    title: typeof data.title === 'string' ? data.title : '',
   }
 }
 
@@ -29,6 +56,15 @@ function isOwnWindow(handle: number): boolean {
 
 function trackExternalWindow(): void {
   try {
+    if (isHyprlandWayland) {
+      const active = readHyprlandActiveWindow()
+      if (active && active.pid !== process.pid) {
+        lastExternalAddress = active.address
+        lastExternalHandle = HYPRLAND_WINDOW_HANDLE
+      }
+      foregroundErrorReported = false
+      return
+    }
     const handle = focusedHandle()
     if (handle !== null && !isOwnWindow(handle)) lastExternalHandle = handle
     foregroundErrorReported = false
@@ -90,6 +126,15 @@ function readClipboard(): ClipboardSnapshot {
 
 function foregroundWindow(): ForegroundWindow | null {
   try {
+    if (isHyprlandWayland) {
+      const active = readHyprlandActiveWindow()
+      if (!active) return null
+      if (active.pid !== process.pid) {
+        lastExternalAddress = active.address
+        lastExternalHandle = HYPRLAND_WINDOW_HANDLE
+      }
+      return { handle: HYPRLAND_WINDOW_HANDLE, title: active.title }
+    }
     const handle = focusedHandle()
     if (handle === null) return null
     if (!isOwnWindow(handle)) lastExternalHandle = handle
@@ -117,6 +162,15 @@ export function createLinuxAdapter(): PlatformAdapter {
     foregroundWindow,
     saveForeground: () => {
       try {
+        if (isHyprlandWayland) {
+          pasteTargetAddress = null
+          const active = readHyprlandActiveWindow()
+          if (active && active.pid !== process.pid) {
+            lastExternalAddress = active.address
+            lastExternalHandle = HYPRLAND_WINDOW_HANDLE
+          }
+          return lastExternalAddress ? HYPRLAND_WINDOW_HANDLE : null
+        }
         const handle = focusedHandle()
         if (handle === null) return lastExternalHandle
         if (isOwnWindow(handle)) return lastExternalHandle ?? handle
@@ -128,6 +182,10 @@ export function createLinuxAdapter(): PlatformAdapter {
       }
     },
     restoreForeground: handle => {
+      if (isHyprlandWayland) {
+        pasteTargetAddress = handle === HYPRLAND_WINDOW_HANDLE ? lastExternalAddress : null
+        return
+      }
       runXdotool(['windowactivate', '--sync', String(handle)])
     },
     writeText: text => clipboard.writeText(text),
@@ -139,6 +197,14 @@ export function createLinuxAdapter(): PlatformAdapter {
     },
     writeFilePaths,
     sendPasteKeys: () => {
+      if (isHyprlandWayland) {
+        const address = pasteTargetAddress
+        pasteTargetAddress = null
+        if (!address) throw new Error('sendPasteKeys: no saved Hyprland target window')
+        const result = runHyprctl(['dispatch', 'sendshortcut', `CTRL,V,address:${address}`])
+        if (!/^ok$/i.test(result)) throw new Error(`Hyprland rejected paste shortcut: ${result}`)
+        return
+      }
       runXdotool(['key', '--clearmodifiers', 'ctrl+v'])
     },
   }
