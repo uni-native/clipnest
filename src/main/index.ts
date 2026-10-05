@@ -78,6 +78,7 @@ let webManager: WebManagerHandle | null = null
 async function bootstrap(): Promise<void> {
   ensureDirs()
   initFileLogging()
+  console.log('[pasteman] 应用启动', { version: app.getVersion(), installed: app.isPackaged, pid: process.pid })
   store = initStore()
   bindShellStore(store)
   const settings: Settings = store.getSettings()

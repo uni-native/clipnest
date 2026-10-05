@@ -351,6 +351,7 @@ export const DEFAULT_SETTINGS: Settings = {
                                                                                  
 
 export interface ClipboardSnapshot {
+  sequence?: number
   formats: string[]
   text: string
   html: string

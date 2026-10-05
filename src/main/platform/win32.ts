@@ -82,6 +82,8 @@ export interface Win32Api {
   GetClipboardData(uFormat: number): unknown
   SetClipboardData(uFormat: number, hMem: unknown): unknown
   IsClipboardFormatAvailable(uFormat: number): number
+  EnumClipboardFormats(uFormat: number): number
+  GetClipboardFormatNameW(uFormat: number, name: unknown, count: number): number
   DragQueryFileW(hDrop: unknown, iFile: number, lpszFile: unknown, cch: number): number
                                                         
   sendCtrlV(): number
@@ -113,6 +115,8 @@ function bindRaw(): Omit<Win32Api, 'sendCtrlV'> {
     GetClipboardData: user32.func('void* __stdcall GetClipboardData(uint32 uFormat)'),
     SetClipboardData: user32.func('void* __stdcall SetClipboardData(uint32 uFormat, void* hMem)'),
     IsClipboardFormatAvailable: user32.func('int __stdcall IsClipboardFormatAvailable(uint32 uFormat)'),
+    EnumClipboardFormats: user32.func('uint32 __stdcall EnumClipboardFormats(uint32 uFormat)'),
+    GetClipboardFormatNameW: user32.func('int __stdcall GetClipboardFormatNameW(uint32 uFormat, char16_t* name, int count)'),
     DragQueryFileW: load('shell32.dll').func('uint32 __stdcall DragQueryFileW(void* hDrop, uint32 iFile, char16_t* lpszFile, uint32 cch)'),
   }
 }
@@ -181,6 +185,28 @@ export function windowProcessId(hWnd: unknown): number {
                                            
                        
    
+export function clipboardFormatNames(): string[] {
+  const w = getWin32()
+  if (!openClipboardWithRetry(w)) {
+    console.warn('[capture] 无法读取原生剪贴板格式，剪贴板被占用')
+    return []
+  }
+  try {
+    const formats: string[] = []
+    const name = alloc('char16_t', 256)
+    let id = w.EnumClipboardFormats(0)
+    while (id) {
+      const length = w.GetClipboardFormatNameW(id, name, 256)
+      formats.push(`${id}:${length > 0 ? decode(name, 'char16_t', length) : '标准格式'}`)
+      id = w.EnumClipboardFormats(id)
+    }
+    return formats
+  } catch (error) {
+    console.error('[capture] 读取原生剪贴板格式失败', error)
+    return []
+  } finally { w.CloseClipboard() }
+}
+
 export function clipboardFilePaths(): string[] {
   const w = getWin32()
   if (!w.IsClipboardFormatAvailable(CF_HDROP)) return []

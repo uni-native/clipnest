@@ -106,6 +106,7 @@ export async function openPostPreview(post: Post): Promise<boolean> {
     if (token !== request || win.isDestroyed()) return false
     await writeFile(join(directory, 'index.html'), previewPage(post, content), 'utf8')
     await win.loadFile(join(directory, 'index.html'))
+    console.log('[pasteman] 预览内容加载完成', { id: post.id, type: post.type, visible: win.isVisible() })
     return true
   } catch (error) {
     console.error('[pasteman] 打开预览失败', error)

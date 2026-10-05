@@ -2,6 +2,7 @@ import { clipboard } from 'electron'
 import { load } from 'koffi'
 import type { IKoffiLib } from 'koffi'
 import type { ClipboardSnapshot } from '@shared/types'
+import { clipboardFormatNames } from '@main/platform/win32'
 
                                          
 const POLL_INTERVAL_MS = 80
@@ -54,26 +55,26 @@ function readSnapshot(): ClipboardSnapshot | null {
     let imageDataUrl: string | null = null
     try {
       if (formats.includes('text/plain')) text = clipboard.readText()
-    } catch {
-                  
+    } catch (error) {
+      console.error('[capture] 读取文本失败', error)
     }
     try {
       if (formats.includes('text/html')) html = clipboard.readHTML()
-    } catch {
-                  
+    } catch (error) {
+      console.error('[capture] 读取富文本失败', error)
     }
     try {
       if (hasFileFormats(formats)) filePath = readFilePath()
-    } catch {
-                  
+    } catch (error) {
+      console.error('[capture] 读取文件路径失败', error)
     }
     try {
       if (formats.includes('image/png')) {
         const image = clipboard.readImage()
         if (!image.isEmpty()) imageDataUrl = image.toDataURL()
       }
-    } catch {
-                  
+    } catch (error) {
+      console.error('[capture] 读取图片失败', error)
     }
     return { formats, text, html, filePath, imageDataUrl }
   } catch (e) {
@@ -132,13 +133,18 @@ export function startListening(onSnapshot: SnapshotHandler): { stop(): void } {
     let seq: number
     try {
       seq = Number(getSeq?.())
-    } catch {
+    } catch (error) {
+      console.error('[capture] 读取剪贴板序号失败', error)
       return
     }
     if (seq === lastSeq) return
     lastSeq = seq
     const snapshot = readSnapshot()
-    if (!snapshot) return
+    if (!snapshot) {
+      console.warn('[capture] 剪贴板变更未读取到内容', { sequence: seq, nativeFormats: clipboardFormatNames() })
+      return
+    }
+    snapshot.sequence = seq
     if (queue.length >= QUEUE_CAPACITY) {
       console.warn('[capture] snapshot queue is full, dropping newest event')
       return
