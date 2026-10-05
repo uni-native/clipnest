@@ -2,6 +2,9 @@ node_modules/
 out/
 dist/
 release/
+release2/
+output/
+.npm-preview-cache/
 *.log
 *.tsbuildinfo
 posts-dump.txt

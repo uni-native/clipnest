@@ -42,7 +42,7 @@ function readText(): string {
   try {
     return clipboard.readText()
   } catch (e) {
-    console.error('[clipnest] clipboard.readText failed', e)
+    console.error('[pasteman] clipboard.readText failed', e)
     return ''
   }
 }
@@ -51,7 +51,7 @@ function readHtml(): string {
   try {
     return clipboard.readHTML()
   } catch (e) {
-    console.error('[clipnest] clipboard.readHTML failed', e)
+    console.error('[pasteman] clipboard.readHTML failed', e)
     return ''
   }
 }
@@ -69,7 +69,7 @@ function readFilePath(): string | null {
       if (parts.length > 0) return parts[0]
     }
   } catch (e) {
-    console.error('[clipnest] clipboard.readBuffer(FileNameW) failed', e)
+    console.error('[pasteman] clipboard.readBuffer(FileNameW) failed', e)
   }
                                                      
   const native = clipboardFilePaths()
@@ -86,7 +86,7 @@ function readImageDataUrl(formats: string[]): string | null {
                                                          
     return url && url !== 'data:image/png;base64,' ? url : null
   } catch (e) {
-    console.error('[clipnest] clipboard.readImage failed', e)
+    console.error('[pasteman] clipboard.readImage failed', e)
     return null
   }
 }
@@ -168,7 +168,7 @@ function createWin32Adapter(): PlatformAdapter {
     writeFilePaths,
     sendPasteKeys: () => {
       const sent = getWin32().sendCtrlV()
-      if (sent !== 4) console.error(`[clipnest] SendInput only queued ${sent}/4 events`)
+      if (sent !== 4) console.error(`[pasteman] SendInput only queued ${sent}/4 events`)
     },
   }
 }
@@ -180,7 +180,7 @@ let adapter: PlatformAdapter | null = null
                                     
 function darwinStub(): PlatformAdapter {
   const fail = (): never => {
-    throw new Error('ClipNest: macOS 平台适配尚未实现（仅支持 Windows）')
+    throw new Error('PasteMan: macOS 平台适配尚未实现（仅支持 Windows）')
   }
   return {
     platform: 'darwin',

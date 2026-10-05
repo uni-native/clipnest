@@ -21,8 +21,8 @@ const manifest = JSON.parse(fs.readFileSync(path.join(extensionRoot, 'manifest.j
 const backgroundSource = fs.readFileSync(path.join(extensionRoot, 'background.js'), 'utf8')
 const contentSource = fs.readFileSync(path.join(extensionRoot, 'content.js'), 'utf8')
 
-const WS_URL = process.env.CLIPNEST_WS_URL || 'ws://127.0.0.1:9377'
-const TOKEN = process.env.CLIPNEST_TOKEN || 'smoke-test'
+const WS_URL = process.env.PASTEMAN_WS_URL || 'ws://127.0.0.1:9377'
+const TOKEN = process.env.PASTEMAN_TOKEN || 'smoke-test'
 const EXT_VERSION = manifest.version
 
 let passCount = 0
@@ -195,16 +195,16 @@ const samplePage = {
 }
 
 console.log('== A. 协议结构校验（JSON 往返 + 字段齐全性） ==')
-check('ext→app hello', { t: 'hello', token: TOKEN, ua: 'ClipNest-Smoke/1.0 (node)', extVersion: EXT_VERSION }, validateExtToApp)
+check('ext→app hello', { t: 'hello', token: TOKEN, ua: 'PasteMan-Smoke/1.0 (node)', extVersion: EXT_VERSION }, validateExtToApp)
 check('ext→app ping', { t: 'ping' }, validateExtToApp)
 check('ext→app field-focus', { t: 'field-focus', focusId: 'f1', field: sampleField, page: samplePage }, validateExtToApp)
 check('ext→app field-blur', { t: 'field-blur' }, validateExtToApp)
 check('ext→app fill-result(ok)', { t: 'fill-result', reqId: 'r1', ok: true }, validateExtToApp)
 check('ext→app fill-result(err)', { t: 'fill-result', reqId: 'r1', ok: false, err: 'boom' }, validateExtToApp)
-check('app→ext welcome', { t: 'welcome', app: 'ClipNest', version: '0.1.0' }, validateAppToExt)
+check('app→ext welcome', { t: 'welcome', app: 'PasteMan', version: '0.1.0' }, validateAppToExt)
 check('app→ext pong', { t: 'pong' }, validateAppToExt)
 check('app→ext auth-fail', { t: 'auth-fail', reason: 'token mismatch' }, validateAppToExt)
-check('app→ext fill(replace)', { t: 'fill', reqId: 'r2', focusId: 'f1', value: 'hello@clipnest.local', mode: 'replace', allowSensitive: false }, validateAppToExt)
+check('app→ext fill(replace)', { t: 'fill', reqId: 'r2', focusId: 'f1', value: 'hello@pasteman.local', mode: 'replace', allowSensitive: false }, validateAppToExt)
 check('app→ext fill(append)', { t: 'fill', reqId: 'r3', focusId: 'f1', value: ' tail', mode: 'append' }, validateAppToExt)
 check(
   'app→ext suggest',
@@ -214,8 +214,8 @@ check(
     focusId: 'f1',
     allowSensitive: false,
     items: [
-      { id: 'p1', title: '邮箱地址', preview: '工作邮箱', value: 'hello@clipnest.local', scope: 'field' },
-      { id: 'p2', title: '官网链接', preview: '历史记录', value: 'https://clipnest.local', scope: 'global' },
+      { id: 'p1', title: '邮箱地址', preview: '工作邮箱', value: 'hello@pasteman.local', scope: 'field' },
+      { id: 'p2', title: '官网链接', preview: '历史记录', value: 'https://pasteman.local', scope: 'global' },
     ],
   },
   validateAppToExt,
@@ -398,11 +398,11 @@ function liveSession() {
     }
 
     ws.addEventListener('error', () => {
-      finish('connect-fail', '无法建立连接：ClipNest 可能未启动，或未在 设置→智能→浏览器扩展连接 中开启')
+      finish('connect-fail', '无法建立连接：PasteMan 可能未启动，或未在 设置→智能→浏览器扩展连接 中开启')
     })
     ws.addEventListener('open', () => {
                                           
-      send({ t: 'hello', token: TOKEN, ua: `ClipNest-Smoke/1.0 (node ${process.version})`, extVersion: EXT_VERSION })
+      send({ t: 'hello', token: TOKEN, ua: `PasteMan-Smoke/1.0 (node ${process.version})`, extVersion: EXT_VERSION })
     })
     ws.addEventListener('message', (ev) => {
       let msg

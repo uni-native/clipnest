@@ -199,7 +199,7 @@ export function clipboardFilePaths(): string[] {
     }
     return paths
   } catch (e) {
-    console.error('[clipnest] read CF_HDROP failed', e)
+    console.error('[pasteman] read CF_HDROP failed', e)
     return []
   } finally {
     w.CloseClipboard()

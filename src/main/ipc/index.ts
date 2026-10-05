@@ -38,6 +38,7 @@ import {
 } from '@main/core/shortcuts'
 import { hidePanel, panelSize, setLayout, setTheme } from '@main/windows/panel'
 import { configureWebManager, openWebManager } from '@main/web/manager'
+import { openPostPreview } from '@main/windows/preview'
 
 export interface IpcDeps {
   store: ClipStore
@@ -294,6 +295,15 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle(IPC.getDataDir, () => userDataDir)
   ipcMain.handle(IPC.getVersion, () => app.getVersion())
   ipcMain.handle(IPC.openWebManager, async () => openWebManager())
+  ipcMain.handle(IPC.previewPost, async (_e, id: string) => {
+    try {
+      const post = store.getPost(id)
+      return post ? await openPostPreview(post) : false
+    } catch (error) {
+      console.error('[pasteman] 文件预览失败', error)
+      return false
+    }
+  })
   ipcMain.handle(IPC.readImageDataUrl, (_e, path: string) => {
                                      
     try {

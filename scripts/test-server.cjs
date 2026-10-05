@@ -17,5 +17,5 @@ http.createServer((req, res) => {
     res.end(buf)
   })
 }).listen(PORT, '127.0.0.1', () => {
-  console.log(`[clipnest] 测试表单: http://127.0.0.1:${PORT}/test-form.html`)
+  console.log(`[pasteman] 测试表单: http://127.0.0.1:${PORT}/test-form.html`)
 })

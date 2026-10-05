@@ -31,7 +31,7 @@ function touchPost(id: string): void {
     if (!storeSingleton) storeSingleton = initStore()
     storeSingleton.touchPost(id)
   } catch (e) {
-    console.error('[clipnest] touchPost failed', e)
+    console.error('[pasteman] touchPost failed', e)
   }
 }
 
@@ -45,7 +45,7 @@ function markSelf(hash: string, contentPath: string | null): void {
   try {
     markSelfWrite(hash, contentPath)
   } catch (e) {
-    console.error('[clipnest] markSelfWrite failed', e)
+    console.error('[pasteman] markSelfWrite failed', e)
   }
 }
 
@@ -72,7 +72,7 @@ function readRawText(path: string | null): string | null {
   try {
     return readFileSync(path, 'utf8')
   } catch (e) {
-    console.error('[clipnest] readRawText failed', e)
+    console.error('[pasteman] readRawText failed', e)
     return null
   }
 }
@@ -91,7 +91,7 @@ function writePostContent(post: Post): void {
       return
     }
     case 'link':
-      writeText(post.preview)
+      writeText(readRawText(post.contentPath) ?? post.preview)
       return
     default:
       writeRichText(readRawText(post.contentPath) ?? '', post.preview)
@@ -123,7 +123,7 @@ async function pasteClipboard(write: () => void): Promise<boolean> {
   try {
     write()
   } catch (e) {
-    console.error('[clipnest] clipboard write failed', e)
+    console.error('[pasteman] clipboard write failed', e)
     return false
   }
   try {
@@ -131,7 +131,7 @@ async function pasteClipboard(write: () => void): Promise<boolean> {
     await delay(KEY_DELAY_MS)
     sendPasteKeys()
   } catch (e) {
-    console.error('[clipnest] paste keyin failed', e)
+    console.error('[pasteman] paste keyin failed', e)
   }
   return true
 }
@@ -151,7 +151,7 @@ export class PasteEngineImpl implements PasteEngine {
     try {
       this.queue.push(readSnapshot())
     } catch (e) {
-      console.error('[clipnest] enqueueCopy failed', e)
+      console.error('[pasteman] enqueueCopy failed', e)
       return this.queue.length
     }
     while (this.queue.length > QUEUE_LIMIT) this.queue.shift()

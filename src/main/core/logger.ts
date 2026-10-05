@@ -3,8 +3,8 @@ import { join } from 'node:path'
 import { formatWithOptions } from 'node:util'
 import { logsDir } from './paths'
 
-const LOG_FILE = join(logsDir, 'clipnest.log')
-const OLD_LOG_FILE = join(logsDir, 'clipnest.previous.log')
+const LOG_FILE = join(logsDir, 'pasteman.log')
+const OLD_LOG_FILE = join(logsDir, 'pasteman.previous.log')
 const MAX_LOG_BYTES = 5 * 1024 * 1024
 const MAX_LINE_LENGTH = 8_000
 let initialized = false

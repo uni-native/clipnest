@@ -102,8 +102,10 @@ export const usePostsStore = defineStore('posts', () => {
     try {
       const ok = await api.posts.paste(id)
       if (!ok) return
+      selectedId.value = id
       void playClipboardSound('paste', useSettingsStore().settings.clipboard.sounds)
       api.window.hide()
+      await refresh()
     } catch (e) {
       console.error('[posts] paste failed', e)
     }

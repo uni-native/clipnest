@@ -80,7 +80,9 @@ onMounted(() => {
   window.addEventListener('hashchange', onHashChange)
   void refreshIntel()
   void store.initBrowser()
-  offIntel = window.clipnest.onIntelligenceStatus((s) => (intel.value = s))
+  void api.common.version().then(version => { APP_VERSION.value = `v${version}` })
+    .catch(error => console.error('[settings] 读取版本失败', error))
+  offIntel = window.pasteman.onIntelligenceStatus((s) => (intel.value = s))
 })
 
 onUnmounted(() => {
@@ -241,7 +243,7 @@ async function onCheckUpdate(): Promise<void> {
   }
 }
 
-const APP_VERSION = 'v0.1.0'
+const APP_VERSION = ref('')
 const dataDir = ref('')
 
                      
@@ -326,7 +328,7 @@ async function onAutoFill(v: boolean): Promise<void> {
 }
 
 function onSensitiveFill(kind: SensitiveFieldKind, label: string, enabled: boolean): void {
-  if (enabled && !window.confirm(`允许剪巢向“${label}”字段填入剪贴板内容？请仅在可信页面开启。`)) return
+  if (enabled && !window.confirm(`允许PasteMan向“${label}”字段填入剪贴板内容？请仅在可信页面开启。`)) return
   void store.update({ browser: { sensitiveFill: { [kind]: enabled } } })
 }
 
@@ -616,15 +618,15 @@ onMounted(() => {
       </button>
                                               
       <span class="nav-hairline" aria-hidden="true"></span>
-      <button class="nav-foot-btn" title="关于剪巢" @click="section = 'general'">关于</button>
+      <button class="nav-foot-btn" title="关于PasteMan" @click="section = 'general'">关于</button>
     </nav>
 
                     
     <div class="settings-main">
       <header class="settings-header">
         <div class="settings-brand">
-          <img class="settings-logo" src="../assets/app-icon.png" alt="剪巢" />
-          <span class="settings-title">剪巢</span>
+          <img class="settings-logo" src="../assets/app-icon.png" alt="PasteMan" />
+          <span class="settings-title">PasteMan</span>
           <span class="settings-ver">{{ APP_VERSION }}</span>
         </div>
         <div class="win-btns">

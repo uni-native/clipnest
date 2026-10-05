@@ -17,12 +17,12 @@ function register(accel: string, fn: () => void): boolean {
   if (!accel) return false
   try {
     if (!globalShortcut.register(accel, fn)) {
-      console.error('[clipnest] 快捷键注册失败（可能被占用）:', accel)
+      console.error('[pasteman] 快捷键注册失败（可能被占用）:', accel)
       return false
     }
     return true
   } catch (err) {
-    console.error('[clipnest] 快捷键注册异常:', accel, err)
+    console.error('[pasteman] 快捷键注册异常:', accel, err)
     return false
   }
 }
@@ -55,10 +55,10 @@ export function initShortcuts(win: BrowserWindow, store: ClipStore): void {
                                              
     const ok = SHOW_HIDE_FALLBACKS.find(accel => accel !== keys.showOrHide && register(accel, () => togglePanel(win)))
     if (ok) {
-      console.warn('[clipnest] 默认唤起键被占用，已降级为:', ok)
+      console.warn('[pasteman] 默认唤起键被占用，已降级为:', ok)
       store.saveSettings({ shortcutKeys: { showOrHide: ok } })
     } else {
-      console.error('[clipnest] 所有唤起快捷键均被占用，请手动在设置中指定')
+      console.error('[pasteman] 所有唤起快捷键均被占用，请手动在设置中指定')
     }
   }
   registerQuickPaste(win, keys.quickPaste, keys.quickPasteEnable)

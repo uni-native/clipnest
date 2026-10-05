@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>剪巢智能填充 · 测试表单</title>
+<title>PasteMan智能填充 · 测试表单</title>
 <style>
   :root {
     --brand: #655cf6;
@@ -200,7 +200,7 @@
 <body>
 <main class="shell">
   <header class="page-head">
-    <h1>剪巢 <span class="brand">智能填充</span>测试页</h1>
+    <h1>PasteMan <span class="brand">智能填充</span>测试页</h1>
     <p class="lead">复制右侧完整资料，再依次点击左侧字段，检查内容拆分、候选变化和密码保护是否符合预期。</p>
   </header>
 
@@ -212,49 +212,49 @@
         <div class="row">
           <label for="fullname">姓名</label>
           <input id="fullname" name="fullname" type="text" placeholder="你的姓名" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row" data-row="email">
           <label for="email">邮箱地址</label>
           <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="phone">手机号码</label>
           <input id="phone" name="phone" type="tel" placeholder="139 0000 5678" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="website">个人主页</label>
           <input id="website" name="website" type="url" placeholder="https://example.com" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="company">所在公司</label>
           <input id="company" name="company" type="text" placeholder="公司或团队名称" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="intro">自我介绍</label>
           <textarea id="intro" name="intro" placeholder="简单介绍一下自己"></textarea>
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="email-en">Email address · 双语识别测试</label>
           <input id="email-en" name="email_en" type="email" placeholder="you@example.com" autocomplete="off" />
-          <div class="filled-badge">剪巢已填充 ✓</div>
+          <div class="filled-badge">PasteMan已填充 ✓</div>
         </div>
 
         <div class="row">
           <label for="pwd">密码</label>
           <input id="pwd" name="password" type="password" placeholder="••••••••" autocomplete="new-password" />
-          <div class="pwd-note">安全规则：剪巢永远不读取、不填充密码字段</div>
+          <div class="pwd-note">安全规则：PasteMan永远不读取、不填充密码字段</div>
         </div>
 
         <button class="submit" type="button" id="show">查看当前填写内容</button>
@@ -281,11 +281,11 @@
       </div>
       <div class="document">
         <h2>张三的求职资料</h2>
-        <div class="document-text" id="sourceText">张三是一名专注桌面效率工具的产品设计师与前端开发者，目前居住在杭州，正在申请 ClipNest Studio 的桌面产品工程师岗位。他习惯把复杂流程整理成清楚、可靠、可以长期使用的产品体验，过去三年主要负责 Electron 桌面应用、浏览器扩展以及本地数据工具的设计和实现。
+        <div class="document-text" id="sourceText">张三是一名专注桌面效率工具的产品设计师与前端开发者，目前居住在杭州，正在申请 PasteMan Studio 的桌面产品工程师岗位。他习惯把复杂流程整理成清楚、可靠、可以长期使用的产品体验，过去三年主要负责 Electron 桌面应用、浏览器扩展以及本地数据工具的设计和实现。
 
-如需联系，请优先使用工作邮箱 zhangsan@example.com。备用邮箱是 backup.zhang@example.net，适合在工作邮箱无法收信时使用。手机号码为 139 0000 5678。个人主页是 https://github.com/clipnest/clipnest，可以查看近期参与的桌面工具和开源项目。
+如需联系，请优先使用工作邮箱 zhangsan@example.com。备用邮箱是 backup.zhang@example.net，适合在工作邮箱无法收信时使用。手机号码为 139 0000 5678。个人主页是 https://github.com/pasteman/pasteman，可以查看近期参与的桌面工具和开源项目。
 
-张三目前就职于 ClipNest Studio，负责智能剪贴板、表单填充和本地搜索体验。他擅长 Vue、TypeScript、Electron 与 SQLite，也关注无障碍、性能和隐私保护。日常工作中，他会先确认用户真正需要完成的任务，再减少不必要的操作步骤，让界面在信息很多时仍然保持清晰。
+张三目前就职于 PasteMan Studio，负责智能剪贴板、表单填充和本地搜索体验。他擅长 Vue、TypeScript、Electron 与 SQLite，也关注无障碍、性能和隐私保护。日常工作中，他会先确认用户真正需要完成的任务，再减少不必要的操作步骤，让界面在信息很多时仍然保持清晰。
 
 个人简介：我喜欢打造安静、快速、可信赖的效率工具。希望剪贴板不只是保存复制记录，还能理解内容之间的关系，在用户需要填写邮箱、电话、主页、公司和自我介绍时给出准确候选，同时确保密码等敏感字段永远不被读取或自动填充。</div>
       </div>

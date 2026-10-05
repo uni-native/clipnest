@@ -22,7 +22,7 @@ function runOnce(store: ClipStore, historyCache: string): void {
     const removed = store.clearHistoryBefore(Date.now() - retain)
     if (removed > 0) store.vacuum()
   } catch (err) {
-    console.error('[clipnest] 保留策略清理失败', err)
+    console.error('[pasteman] 保留策略清理失败', err)
   }
 }
 

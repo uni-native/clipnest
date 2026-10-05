@@ -11,6 +11,6 @@ export function applyLaunchAtLogin(enable: boolean): void {
       path: process.execPath,
     })
   } catch (e) {
-    console.error('[clipnest] setLoginItemSettings failed', e)
+    console.error('[pasteman] setLoginItemSettings failed', e)
   }
 }

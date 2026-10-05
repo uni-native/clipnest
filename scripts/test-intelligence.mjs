@@ -40,8 +40,8 @@ const prose = [
   '张三的求职资料',
   '张三是一名专注桌面效率工具的产品设计师。',
   '如需联系，请优先使用工作邮箱 zhangsan@example.com。备用邮箱是 backup.zhang@example.net。手机号码为 139 0000 5678。',
-  '个人主页是 https://github.com/clipnest/clipnest。',
-  '张三目前就职于 ClipNest Studio，负责智能剪贴板、表单填充和本地搜索体验。',
+  '个人主页是 https://github.com/pasteman/pasteman。',
+  '张三目前就职于 PasteMan Studio，负责智能剪贴板、表单填充和本地搜索体验。',
   '个人简介：我喜欢打造安静、快速、可信赖的效率工具。',
 ].join('\n')
 const proseFragments = extractCandidateFragments(prose)
@@ -52,8 +52,8 @@ assert.deepEqual(
     ['email', 'zhangsan@example.com', '工作邮箱'],
     ['email', 'backup.zhang@example.net', '备用邮箱'],
     ['phone', '139 0000 5678', '手机号码'],
-    ['url', 'https://github.com/clipnest/clipnest', '个人主页'],
-    ['company', 'ClipNest Studio', '公司'],
+    ['url', 'https://github.com/pasteman/pasteman', '个人主页'],
+    ['company', 'PasteMan Studio', '公司'],
     ['text', '我喜欢打造安静、快速、可信赖的效率工具。', '个人简介'],
   ],
 )

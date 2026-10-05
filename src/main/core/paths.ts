@@ -3,10 +3,10 @@ import { join } from 'node:path'
 import { mkdirSync } from 'node:fs'
 
                                                         
-export const userDataDir = join(app.getPath('userData'), 'clipnest-data')
+export const userDataDir = join(app.getPath('userData'), 'pasteman-data')
 
                                 
-export const dbFile = 'clipnest.db'
+export const dbFile = 'pasteman.db'
 export const dbPath = join(userDataDir, dbFile)
 
                  

@@ -11,7 +11,7 @@ export function createTray(win: BrowserWindow): Tray | null {
   destroyTray()
 
   const instance = new Tray(loadTrayIcon())
-  instance.setToolTip('剪巢 ClipNest')
+  instance.setToolTip('PasteMan')
   instance.on('click', () => togglePanel(win))
 
   const showOrHide = getSettings().shortcutKeys.showOrHide

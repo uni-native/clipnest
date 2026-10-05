@@ -141,13 +141,13 @@ function runTests(store, raw) {
   info('dbPath = ' + store.dbPath)
 
                         
-  const r1 = store.insertPost(newPost('h1', '剪巢 剪贴板', 'preview-one'))
+  const r1 = store.insertPost(newPost('h1', 'PasteMan 剪贴板', 'preview-one'))
   ok(r1.created === true && r1.post.useCount === 1 && r1.post.id.length > 0, 'insertPost: first insert created', r1)
   const r2 = store.insertPost(Object.assign(newPost('h1', '另一个标题', 'preview-two'), { sourceApp: 'Second App' }))
   ok(r2.created === false, 'insertPost: duplicate hash -> created=false', r2)
   ok(r2.post.id === r1.post.id, 'insertPost: duplicate keeps same id')
   ok(r2.post.useCount === 2, 'insertPost: use_count + 1 on conflict', r2.post.useCount)
-  ok(r2.post.title === '剪巢 剪贴板', 'insertPost: title not overwritten on conflict', r2.post.title)
+  ok(r2.post.title === 'PasteMan 剪贴板', 'insertPost: title not overwritten on conflict', r2.post.title)
   ok(r2.post.lastUsedAt >= r1.post.lastUsedAt, 'insertPost: last_used_at refreshed on conflict')
   ok(raw.prepare('SELECT COUNT(*) c FROM posts').get().c === 1, 'insertPost: no duplicate row in table')
   const copyEvents = store.queryActivity(Date.now() - 5000, Date.now() + 5000).filter((e) => e.post.id === r1.post.id)
@@ -179,7 +179,7 @@ function runTests(store, raw) {
   ok(store.queryPosts({ keyword: '   ' }).items.length === raw.prepare('SELECT COUNT(*) c FROM posts').get().c, 'fts: blank keyword ignored')
 
   store.updatePost(r1.post.id, { title: 'renamed-title-xyz' })
-  ok(!store.queryPosts({ keyword: '剪巢' }).items.some((p) => p.id === r1.post.id), 'fts: old keyword gone after updatePost')
+  ok(!store.queryPosts({ keyword: 'PasteMan' }).items.some((p) => p.id === r1.post.id), 'fts: old keyword gone after updatePost')
   ok(store.queryPosts({ keyword: 'renamed' }).items.some((p) => p.id === r1.post.id), 'fts: new keyword found after updatePost')
 
                       
@@ -346,7 +346,7 @@ app.whenReady().then(() => {
     compileSources()
     const mod = require(path.join(BUILD, 'core', 'store.js'))
     store = mod.initStore()
-    ok(typeof store.dbPath === 'string' && store.dbPath.endsWith('clipnest.db'), 'initStore: returns store with dbPath')
+    ok(typeof store.dbPath === 'string' && store.dbPath.endsWith('pasteman.db'), 'initStore: returns store with dbPath')
     ok(store.dbPath.includes('.store-test-build'), 'initStore: uses redirected userData (real APPDATA untouched)')
     raw = new (require('better-sqlite3'))(store.dbPath)
     runTests(store, raw)

@@ -1,4 +1,4 @@
-# ClipNest（剪巢）开发契约
+# PasteMan（PasteMan）开发契约
 
 本地优先的智能剪贴板管理器。Electron 38 + electron-vite + Vue 3 + TypeScript + better-sqlite3(FTS5) + koffi(Win32)。
 
@@ -7,7 +7,7 @@
 1. **类型唯一来源**：`src/shared/types.ts`。任何模块不得重复定义其中的类型；需要新类型就加进去（只加不改名）。
 2. **不碰别人的文件**：每个子代理只写自己名下的文件（见下文"模块归属"）。需要别人提供的能力，按契约函数签名调用。
 3. **零网络**：除 `core/updater.ts`（自建更新源）外，任何模块不得发起网络请求。渲染层 CSP 已是 `connect-src 'none'`。
-4. **数据库**：只用 `core/paths.ts` 导出的 `dbPath`（`%APPDATA%/clipnest-data/clipnest.db`）。**严禁**读写原版 `~/.clipboard/db.sqlite`。
+4. **数据库**：只用 `core/paths.ts` 导出的 `dbPath`（`%APPDATA%/pasteman-data/pasteman.db`）。**严禁**读写原版 `~/.clipboard/db.sqlite`。
 5. **平台分支**：只允许出现在 `src/main/platform/` 内（win32 实现 + darwin stub）。其他模块出现 `process.platform === 'darwin'` 判分支属违规。
 6. **错误处理**：所有 IPC handler 不得抛异常穿透（返回 false / 空结果并 console.error）。所有文件操作 try/catch。
 7. **代码风格**：TS strict；不用 any（除 preload subscribe 的内部 listener）；函数 ≤ 60 行；注释只写"为什么"，不写"是什么"。
@@ -65,7 +65,7 @@
 - `tray.ts`：托盘图标用 `resources/iconTemplate_win.png`（占位 1×1 png 也行，但必须有）；菜单：显示/隐藏（accelerator=设置值）、偏好设置、退出。
 - `shortcuts.ts`：`globalShortcut` 统一注册 showOrHide / quickPaste+1..9 / prev/next group；`setShowOrHideHotkey(key)`：先 unregister 旧的，注册新的，失败回滚旧的并返回 false；注册成功写回 store settings。
 - `retention.ts`：`initRetention(store, settings)` 按 `historyCache`（`infinity`/`day`/`week`/`month`/`quarter`/`half`/`year`）`setInterval` 每小时检查一次，过期 `clearHistoryBefore` + `vacuum()`。
-- `updater.ts`：electron-updater，`autoUpdater.autoInstallOnAppQuit=false`，feed URL 从 `process.env.CLIPNEST_UPDATE_URL` 或默认 `https://github.com/liuhao/clipnest/releases/latest/download` 读取（generic provider）；启动后延迟 10s 后台 `checkForUpdates()`，`update-downloaded` 时托盘气泡 + 通知渲染层。**不自动安装**。
+- `updater.ts`：electron-updater，`autoUpdater.autoInstallOnAppQuit=false`，feed URL 从 `process.env.PASTEMAN_UPDATE_URL` 或默认 `https://github.com/liuhao/pasteman/releases/latest/download` 读取（generic provider）；启动后延迟 10s 后台 `checkForUpdates()`，`update-downloaded` 时托盘气泡 + 通知渲染层。**不自动安装**。
 
 ### 渲染层（renderer/）
 - hash 路由（自写 30 行足够，不引 vue-router）：`#/` 面板，`#/settings` 设置页。`#/settings` 时 App 渲染 SettingsView，否则渲染面板。
@@ -76,12 +76,12 @@
 - 样式：**与原版保持一致**——浅色主题（`styles.css` 已定义 CSS 变量）、竖版右侧 290px 贴边、圆角 10px 白底、列表行 hover 高亮、选中品牌蓝。设置页左侧深灰导航 180px + 右侧白底表单。全部用原生 CSS（禁引 UI 组件库）。
 - 交互：点击条目 = 粘贴（`api.posts.paste`）；回车 = 粘贴队首；Esc = 隐藏；↑↓ 移动选中；Ctrl+1..9 由主进程快捷键直接触发粘贴（监听 `onHotKey(n)` → 粘贴第 n 条）。
 - 事件：订阅 `onPostCaptured`（插入列表头部）、`onPostTouched`（移到头部）、`onSettingsChanged`（应用主题/布局）、`onShow/onHide`（控制 CSS 动画类）。
-- 图片条目：`<img :src="'clipnest-file://' + contentPath">`——不行，改用：主进程已把图片落盘，渲染层直接用 `nativeImage`？**不行**。正确做法：主进程 IPC `queryPosts` 返回的 Post 不带图片数据；渲染层用 `<img src="data:...">` 会太大。**约定：图片条目显示文件图标占位 + 尺寸，点击粘贴时不预览；P5 再做缩略图 IPC**。简单可靠优先。
+- 图片条目：`<img :src="'pasteman-file://' + contentPath">`——不行，改用：主进程已把图片落盘，渲染层直接用 `nativeImage`？**不行**。正确做法：主进程 IPC `queryPosts` 返回的 Post 不带图片数据；渲染层用 `<img src="data:...">` 会太大。**约定：图片条目显示文件图标占位 + 尺寸，点击粘贴时不预览；P5 再做缩略图 IPC**。简单可靠优先。
 
 ## 构建与验证命令
 
 ```bash
-cd C:\Users\liuhao\.zcode\workspace\default\clipnest
+cd C:\Users\liuhao\.zcode\workspace\default\\clipnest
 npx tsc --noEmit -p tsconfig.node.json      # 主进程类型检查
 npx vue-tsc --noEmit -p tsconfig.web.json   # 渲染层类型检查
 npx electron-vite build                     # 构建

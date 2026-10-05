@@ -1,8 +1,8 @@
 {
-  "name": "clipnest",
-  "productName": "剪巢",
-  "version": "0.1.0",
-  "description": "剪巢 ClipNest —— 本地优先的智能剪贴板管理器",
+  "name": "pasteman",
+  "productName": "PasteMan",
+  "version": "0.1.1",
+  "description": "PasteMan —— 本地优先的智能剪贴板管理器",
   "main": "./out/main/index.js",
   "private": true,
   "author": "liuhao",
@@ -19,9 +19,13 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
+    "@napi-rs/canvas": "^0.1.100",
     "better-sqlite3": "^12.2.0",
     "electron-updater": "^6.6.2",
+    "fast-xml-parser": "^5.11.2",
+    "fflate": "^0.8.3",
     "koffi": "^2.11.0",
+    "pdfjs-dist": "^5.6.205",
     "pinia": "^4.0.3",
     "ws": "^8.21.3"
   },
@@ -40,11 +44,11 @@
     "vue-tsc": "^2.2.8"
   },
   "build": {
-    "appId": "com.clipnest.app",
-    "productName": "剪巢",
+    "appId": "com.pasteman.app",
+    "productName": "PasteMan",
     "asar": true,
     "directories": {
-      "output": "release"
+      "output": "release2"
     },
     "files": [
       "out/**/*",
@@ -68,15 +72,26 @@
       ]
     },
     "nsis": {
-      "artifactName": "ClipNest-Setup-${version}-${arch}.${ext}",
+      "artifactName": "PasteMan-Setup-${version}-${arch}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "剪巢"
+      "shortcutName": "PasteMan"
     },
     "portable": {
-      "artifactName": "ClipNest-Portable-${version}-${arch}.${ext}"
-    }
+      "artifactName": "PasteMan-Portable-${version}-${arch}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/uni-native/clipnest/releases/latest/download"
+      }
+    ],
+    "asarUnpack": [
+      "out/main/preview-worker.js",
+      "node_modules/pdfjs-dist/**/*",
+      "node_modules/@napi-rs/**/*"
+    ]
   }
 }

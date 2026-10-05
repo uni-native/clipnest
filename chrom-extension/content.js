@@ -13,8 +13,8 @@
 (function () {
   'use strict'
 
-  if (window.__clipnestContentLoaded) return                   
-  window.__clipnestContentLoaded = true
+  if (window.__pastemanContentLoaded) return
+  window.__pastemanContentLoaded = true
 
                                                                                 
 
@@ -75,10 +75,10 @@
       const r = chrome.runtime.sendMessage(msg)
 
       if (r && typeof r.catch === 'function') {
-        r.catch((e) => console.error('[ClipNest] 发送消息失败', e))
+        r.catch((e) => console.error('[PasteMan] 发送消息失败', e))
       }
     } catch (e) {
-      console.error('[ClipNest] 发送消息失败', e)
+      console.error('[PasteMan] 发送消息失败', e)
     }
   }
 
@@ -179,7 +179,7 @@
       if (el.isContentEditable || !('value' in el)) return boundedText(el, VALUE_MAX, VALUE_NODE_MAX)
       return String(el.value || '').slice(0, VALUE_MAX)
     } catch (e) {
-      console.error('[ClipNest] 读取输入框内容失败', e)
+      console.error('[PasteMan] 读取输入框内容失败', e)
       return ''
     }
   }
@@ -203,7 +203,7 @@
       }
       return String(clone.outerHTML || '').slice(0, FIELD_HTML_MAX)
     } catch (e) {
-      console.error('[ClipNest] 提取输入框标签失败', e)
+      console.error('[PasteMan] 提取输入框标签失败', e)
       return ''
     }
   }
@@ -420,7 +420,7 @@
 
   function handleFill(msg) {
     if (!msg.focusId || msg.focusId !== currentFocusId) {
-      console.warn('[ClipNest] 忽略过期填充结果', { focusId: msg.focusId, currentFocusId })
+      console.warn('[PasteMan] 忽略过期填充结果', { focusId: msg.focusId, currentFocusId })
       return
     }
     const field = currentField
@@ -496,7 +496,7 @@
         inputType: 'insertReplacementText',
       }))
     } catch (e) {
-      console.error('[ClipNest] InputEvent 创建失败', e)
+      console.error('[PasteMan] InputEvent 创建失败', e)
       el.dispatchEvent(new Event('input', { bubbles: true, composed: true }))
     }
     el.dispatchEvent(new Event('change', { bubbles: true, composed: true }))
@@ -519,7 +519,7 @@
 
   function handleSuggest(msg) {
     if (!msg.focusId || msg.focusId !== currentFocusId) {
-      console.warn('[ClipNest] 忽略过期候选结果', { focusId: msg.focusId, currentFocusId })
+      console.warn('[PasteMan] 忽略过期候选结果', { focusId: msg.focusId, currentFocusId })
       return
     }
     const field = currentField
@@ -538,7 +538,7 @@
   function showSuggest(field, reqId, items, allowSensitive) {
     hideSuggest()
     const root = document.createElement('div')
-    root.setAttribute('data-clipnest-overlay', '1')
+    root.setAttribute('data-pasteman-overlay', '1')
     root.style.cssText = [
       'position:fixed',
       `z-index:${OVERLAY_Z}`,
@@ -556,7 +556,7 @@
     ].join(';')
 
     const header = document.createElement('div')
-    header.textContent = '剪巢建议 · ↑↓ 选择 · Enter 填入'
+    header.textContent = 'PasteMan建议 · ↑↓ 选择 · Enter 填入'
     header.style.cssText = 'font-size:11px;color:#8a8f99;padding:2px 8px 6px;white-space:nowrap'
     root.appendChild(header)
 
@@ -688,7 +688,7 @@
         const end = String(next.value || '').length
         next.setSelectionRange(end, end)
       } catch (e) {
-        console.error('[ClipNest] 移动输入光标失败', e)
+        console.error('[PasteMan] 移动输入光标失败', e)
       }
     }
     next.scrollIntoView({ block: 'nearest', inline: 'nearest' })

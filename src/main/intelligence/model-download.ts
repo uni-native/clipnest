@@ -214,7 +214,7 @@ class ModelDownloaderImpl implements ModelDownloader {
         })
       }
       writeFileSync(
-        join(tempDir, 'clipnest-model.json'),
+        join(tempDir, 'pasteman-model.json'),
         JSON.stringify({ repo: entry.repo, revision: entry.revision, hashes }, null, 2),
         'utf8',
       )

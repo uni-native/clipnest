@@ -15,6 +15,6 @@ export function restoreForeground(handle: number | null): void {
   try {
     getPlatform().restoreForeground(handle)
   } catch (e) {
-    console.error('[clipnest] restoreForeground failed', e)
+    console.error('[pasteman] restoreForeground failed', e)
   }
 }

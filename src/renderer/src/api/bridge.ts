@@ -1,6 +1,6 @@
 import type {
   BrowserStatus,
-  ClipNestBridge,
+  PasteManBridge,
   DeepPartial,
   Group,
   IntelligenceStatus,
@@ -18,7 +18,7 @@ import type {
                                       
                                    
    
-const raw = (): ClipNestBridge => window.clipnest
+const raw = (): PasteManBridge => window.pasteman
 
 export const bridge = raw()
 
@@ -82,5 +82,6 @@ export const api = {
     version: () => bridge.getVersion(),
     openWebManager: () => bridge.openWebManager(),
     readImage: (path: string) => bridge.readImageDataUrl(path),
+    preview: (id: string) => bridge.previewPost(id),
   },
 }

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/types'
 import type {
   BrowserStatus,
-  ClipNestBridge,
+  PasteManBridge,
   DeepPartial,
   Group,
   IntelligenceStatus,
@@ -29,7 +29,7 @@ function subscribe(channel: string, cb: (...args: any[]) => void): () => void {
   }
 }
 
-const bridge: ClipNestBridge = {
+const bridge: PasteManBridge = {
              
   queryPosts: (q: PostQuery) => invoke<PostPage>(IPC.queryPosts, q),
   removePost: (id: string) => invoke<boolean>(IPC.removePost, id),
@@ -85,6 +85,7 @@ const bridge: ClipNestBridge = {
   getVersion: () => invoke<string>(IPC.getVersion),
   openWebManager: () => invoke<boolean>(IPC.openWebManager),
   readImageDataUrl: (path: string) => invoke<string | null>(IPC.readImageDataUrl, path),
+  previewPost: (id: string) => invoke<boolean>(IPC.previewPost, id),
 
                       
   browserStatus: () => invoke<BrowserStatus>(IPC.browserStatus),
@@ -110,4 +111,4 @@ const bridge: ClipNestBridge = {
   onBrowserStatus: cb => subscribe(IPC.evtBrowserStatus, (s: BrowserStatus) => cb(s)),
 }
 
-contextBridge.exposeInMainWorld('clipnest', bridge)
+contextBridge.exposeInMainWorld('pasteman', bridge)

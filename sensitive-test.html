@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>剪巢敏感字段填充测试</title>
+<title>PasteMan敏感字段填充测试</title>
 <style>
   :root {
     color-scheme: light;
@@ -94,12 +94,12 @@
 <body>
 <main>
   <header>
-    <h1>剪巢敏感字段填充测试</h1>
+    <h1>PasteMan敏感字段填充测试</h1>
     <p class="lead">分别复制两组本地测试数据，再点击对应输入框。关闭权限时应无响应，开启权限后应出现候选或直接填入。</p>
   </header>
 
   <div class="setup">
-    <span><strong>1</strong> 在剪巢设置中打开浏览器与网页智能填充</span>
+    <span><strong>1</strong> 在PasteMan设置中打开浏览器与网页智能填充</span>
     <span><strong>2</strong> 展开敏感字段并开启需要测试的项目</span>
     <span><strong>3</strong> 复制测试数据后点击输入框</span>
   </div>
@@ -170,7 +170,7 @@
     },
     account: {
       ids: ['account-password', 'verification-code'],
-      text: ['密码 / Password', 'ClipNest-Test-2026!', '验证码 / Verification Code', '654321'].join('\n'),
+      text: ['密码 / Password', 'PasteMan-Test-2026!', '验证码 / Verification Code', '654321'].join('\n'),
     },
   }
 

@@ -556,6 +556,7 @@ export const IPC = {
   browserRegenerateToken: 'browser:regenerate-token',
   browserPing: 'browser:ping',
   readImageDataUrl: 'content:read-image',
+  previewPost: 'content:preview-post',
                                   
   evtPostCaptured: 'event:post-captured',
   evtPostTouched: 'event:post-touched',
@@ -587,7 +588,13 @@ export interface IntelligenceStatus {
   models?: ModelStatusInfo['models']
 }
 
-export interface ClipNestBridge {
+export interface PreviewRequest {
+  post: Post
+  directory: string
+  mode?: 'thumbnail'
+}
+
+export interface PasteManBridge {
              
   queryPosts(q: PostQuery): Promise<PostPage>
   removePost(id: string): Promise<boolean>
@@ -640,6 +647,7 @@ export interface ClipNestBridge {
   browserPing(): Promise<boolean>
                                                         
   readImageDataUrl(path: string): Promise<string | null>
+  previewPost(id: string): Promise<boolean>
                        
   onPostCaptured(cb: (e: CaptureEvent) => void): () => void
   onPostTouched(cb: (id: string) => void): () => void
@@ -656,6 +664,6 @@ export interface ClipNestBridge {
 
 declare global {
   interface Window {
-    clipnest: ClipNestBridge
+    pasteman: PasteManBridge
   }
 }

@@ -88,10 +88,10 @@ function onWheel(e: WheelEvent): void {
 
 function onPointerDown(e: PointerEvent): void {
   if (!isHorizontal.value || e.pointerType === 'touch' || e.button !== 0) return
+  if (e.target instanceof Element && e.target.closest('button, input, a, .ctx-menu')) return
   const el = scroller.value
   if (!el) return
   dragState = { pointerId: e.pointerId, startX: e.clientX, startLeft: el.scrollLeft, moved: false }
-  el.setPointerCapture(e.pointerId)
 }
 
 function onPointerMove(e: PointerEvent): void {
@@ -100,6 +100,7 @@ function onPointerMove(e: PointerEvent): void {
   if (!drag || !el || drag.pointerId !== e.pointerId) return
   const delta = e.clientX - drag.startX
   if (!drag.moved && Math.abs(delta) < 5) return
+  if (!drag.moved) el.setPointerCapture(e.pointerId)
   drag.moved = true
   dragging.value = true
   el.scrollLeft = drag.startLeft - delta

@@ -22,7 +22,7 @@ const RECONNECT_BASE_MS = 1_000
 const RECONNECT_MAX_MS = 30_000        
 const RECONNECT_JITTER = 0.2                         
 const PING_TEST_TIMEOUT_MS = 2_000                  
-const KEEPALIVE_ALARM = 'clipnest-keepalive'
+const KEEPALIVE_ALARM = 'pasteman-keepalive'
 const TARGET_TTL_MS = 120_000
 
                                                                               
@@ -45,7 +45,7 @@ let activeTarget = null
                                                                               
 
 function log(...args) {
-  console.log('[ClipNest]', ...args)
+  console.log('[PasteMan]', ...args)
 }
 
 function setStatus(next) {
@@ -191,7 +191,7 @@ function handleAppMessage(msg) {
       lastPongAt = Date.now()
       setStatus('connected')
       flushPendingTests(true)
-      log('已连接 ClipNest', msg.app, msg.version)
+      log('已连接 PasteMan', msg.app, msg.version)
       break
     case 'pong':
       lastPongAt = Date.now()
@@ -365,7 +365,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 function handlePingTest(sendResponse) {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    sendResponse({ ok: false, err: '未连接到 ClipNest，请先保存配置' })
+    sendResponse({ ok: false, err: '未连接到 PasteMan，请先保存配置' })
     return
   }
   let settled = false

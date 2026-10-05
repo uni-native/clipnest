@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { BrowserWindow, shell } from 'electron'
 import { IPC } from '@shared/types'
 import type { ClipboardActivity, ClipStore, ContentType, Post, PostQuery } from '@shared/types'
+import { registerImage, getImageThumbnail, forgetImage } from './images'
 
 const HOST = '127.0.0.1'
 const MAX_BODY_BYTES = 64 * 1024
@@ -59,9 +60,9 @@ function json(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body))
 }
 
-function publicPost(post: Post): Omit<Post, 'hash' | 'contentPath'> {
+function publicPost(post: Post): Omit<Post, 'hash' | 'contentPath'> & { imageUrl?: string } {
   const { hash: _hash, contentPath: _contentPath, ...safe } = post
-  return safe
+  return { ...safe, imageUrl: registerImage(post) }
 }
 
 function classifyPost(post: Post): ContentCategory {
@@ -256,6 +257,7 @@ async function handleApi(
       return true
     }
     store.removePost(id)
+    forgetImage(id)
     broadcastRemoved([id])
     json(res, 200, { ok: true, removed: [id] })
     return true
@@ -272,7 +274,7 @@ async function handleApi(
       json(res, 400, { ok: false, error: '请选择 1 到 200 条内容' })
       return true
     }
-    for (const id of ids) store.removePost(id)
+    for (const id of ids) { store.removePost(id); forgetImage(id) }
     broadcastRemoved(ids)
     json(res, 200, { ok: true, removed: ids })
     return true
@@ -288,6 +290,13 @@ async function route(req: IncomingMessage, res: ServerResponse, store: ClipStore
       return
     }
     const url = new URL(req.url ?? '/', activeUrl || `http://${HOST}`)
+    if (req.method === 'GET' && url.pathname.startsWith('/api/images/')) {
+      const image = await getImageThumbnail(decodeURIComponent(url.pathname.slice('/api/images/'.length)))
+      if (!image) { json(res, 404, { error: '图片不存在，请刷新列表' }); return }
+      res.writeHead(200, { ...headers('image/png'), 'Cache-Control': 'private, max-age=3600', 'Content-Length': String(image.length) })
+      res.end(image)
+      return
+    }
     if (await handleApi(req, res, url, store)) return
     if (req.method !== 'GET') {
       json(res, 405, { ok: false, error: '不支持的操作' })

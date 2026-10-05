@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="resources/icon.png" width="112" height="112" alt="剪巢 ClipNest 图标">
+  <img src="resources/icon.png" width="112" height="112" alt="PasteMan 图标">
 
-  <h1>剪巢 ClipNest</h1>
+  <h1>PasteMan</h1>
 
   <p><strong>本地优先的 Windows 智能剪贴板</strong></p>
   <p>让复制过的内容自动归巢，需要时快速找到，并安全地填入网页表单。</p>
@@ -17,15 +17,15 @@
 
 ## 从喜欢一个工具开始
 
-我一直是鱼皮[《剪切助手》](https://jianqiezhushou.com/)的忠实用户，也很感谢这个优秀的项目。用久了，总会想：如果它能继续长出一些新能力就好了。后来更新节奏慢了下来，我便试着自己动手，写一个更贴近自己使用习惯的剪贴板工具。剪巢就是这样开始的。
+我一直是鱼皮[《剪切助手》](https://jianqiezhushou.com/)的忠实用户，也很感谢这个优秀的项目。用久了，总会想：如果它能继续长出一些新能力就好了。后来更新节奏慢了下来，我便试着自己动手，写一个更贴近自己使用习惯的剪贴板工具。PasteMan就是这样开始的。
 
 Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我暂时想不起来，但我记住了那个念头：我想要的不只是保存复制记录，还想要一个能理解内容、在需要时帮我找到并使用它们的智能助手。
 
-最初的基础功能前后花了 3 天。其中 Step5 用掉了 Plus 每月 99 元的额度，模型集成则借助 GPT 完成。现在的剪巢还不够完美；如果你在使用中发现问题，或有更好的想法，欢迎反馈。
+最初的基础功能前后花了 3 天。其中 Step5 用掉了 Plus 每月 99 元的额度，模型集成则借助 GPT 完成。现在的PasteMan还不够完美；如果你在使用中发现问题，或有更好的想法，欢迎反馈。
 
-## 为什么是剪巢
+## 为什么是PasteMan
 
-普通剪贴板只记住“刚才复制了什么”。剪巢会把内容保存在本机，自动去重、分类和建立索引，让它们能够被再次搜索、整理和使用。
+普通剪贴板只记住“刚才复制了什么”。PasteMan会把内容保存在本机，自动去重、分类和建立索引，让它们能够被再次搜索、整理和使用。
 
 它不仅是一份历史记录，也是一套完整的本地工作流：
 
@@ -57,13 +57,13 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 
 网页版管理页提供复制次数、唯一内容、重复率、粘贴次数、活跃时段、内容分类、主要来源和清理建议。服务仅监听本机地址。
 
-![剪巢每日复制分析](demo-video/clipnest-launch-bilingual/assets/web-analytics.png)
+![PasteMan每日复制分析](demo-video/pasteman-launch-bilingual/assets/web-analytics.png)
 
 ### 内容管理
 
 可以搜索全部历史，按类型和分组筛选，查看来源与最近使用时间，并删除单项或批量清理。
 
-![剪巢网页版内容管理](demo-video/clipnest-launch-bilingual/assets/web-content.png)
+![PasteMan网页版内容管理](demo-video/pasteman-launch-bilingual/assets/web-content.png)
 
 ### 浏览器智能填充
 
@@ -71,8 +71,8 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 
 <table>
   <tr>
-    <td width="50%"><img src="demo-video/clipnest-launch-bilingual/assets/settings-browser.png" alt="浏览器连接设置"></td>
-    <td width="50%"><img src="demo-video/clipnest-launch-bilingual/assets/settings-intelligence.png" alt="智能填充设置"></td>
+    <td width="50%"><img src="demo-video/pasteman-launch-bilingual/assets/settings-browser.png" alt="浏览器连接设置"></td>
+    <td width="50%"><img src="demo-video/pasteman-launch-bilingual/assets/settings-intelligence.png" alt="智能填充设置"></td>
   </tr>
   <tr>
     <td align="center">本机桥接、令牌与自动填充</td>
@@ -92,8 +92,8 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 
 正式构建会在 `release/` 中生成两个版本：
 
-- `ClipNest-Setup-0.1.0-x64.exe`：安装版，可选择安装目录并创建快捷方式。
-- `ClipNest-Portable-0.1.0-x64.exe`：便携版，无需安装即可运行。
+- `PasteMan-Setup-0.1.0-x64.exe`：安装版，可选择安装目录并创建快捷方式。
+- `PasteMan-Portable-0.1.0-x64.exe`：便携版，无需安装即可运行。
 
 ### 从源码运行
 
@@ -112,7 +112,7 @@ npm run dist:win
 
 ## 基本使用
 
-1. 启动剪巢后正常复制内容，记录会自动进入剪贴板面板。
+1. 启动PasteMan后正常复制内容，记录会自动进入剪贴板面板。
 2. 使用全局快捷键呼出面板，输入关键词或选择分组。
 3. 点击内容即可粘贴到原窗口，也可以使用数字快捷键快速粘贴。
 4. 在设置中开启“开机时自动运行”，之后登录 Windows 会自动启动。
@@ -127,11 +127,11 @@ npm run dist:win
 1. 在 Edge 打开 `edge://extensions`，或在 Chrome 打开 `chrome://extensions`。
 2. 开启开发人员模式。
 3. 选择“加载解压缩的扩展”，然后选择项目中的 `chrom-extension` 目录。
-4. 将“剪巢 ClipNest 连接器”固定到浏览器工具栏。
+4. 将“PasteMan 连接器”固定到浏览器工具栏。
 
 ### 建立连接
 
-1. 打开剪巢设置中的“浏览器”。
+1. 打开PasteMan设置中的“浏览器”。
 2. 开启本机桥接，默认地址为 `ws://127.0.0.1:9377`。
 3. 复制连接令牌并粘贴到扩展弹窗。
 4. 点击“保存并重连”，连接状态变为绿色后即可使用。
@@ -142,7 +142,7 @@ npm run dist:win
 
 ## 本地智能模型
 
-模型不是使用剪巢的前置条件。默认规则匹配无需下载任何模型；候选较多时，可以按需安装本地轻量模型提高语义匹配能力。
+模型不是使用PasteMan的前置条件。默认规则匹配无需下载任何模型；候选较多时，可以按需安装本地轻量模型提高语义匹配能力。
 
 | 模型 | 适用场景 | 下载体积 |
 |---|---|---:|
@@ -163,13 +163,13 @@ npm run dist:win
 默认数据目录：
 
 ```text
-%APPDATA%\clipnest\clipnest-data\
-├─ clipnest.db    剪贴板数据库
+%APPDATA%\pasteman\pasteman-data\
+├─ pasteman.db    剪贴板数据库
 ├─ blobs\         图片与富文本内容
 └─ models\        用户下载的本地模型
 ```
 
-剪巢不会读取或修改其他剪贴板软件的数据库。
+PasteMan不会读取或修改其他剪贴板软件的数据库。
 
 ## 技术架构
 
@@ -196,7 +196,7 @@ flowchart LR
 ## 项目结构
 
 ```text
-clipnest/
+pasteman/
 ├─ chrom-extension/       Edge 与 Chrome 浏览器连接器
 ├─ resources/             应用图标与打包资源
 ├─ scripts/               测试和资源生成脚本

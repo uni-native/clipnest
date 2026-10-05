@@ -1,5 +1,5 @@
                                                   
-const WebSocket = require('C:/Users/liuhao/.zcode/workspace/default/clipnest/node_modules/ws')
+const WebSocket = require('../node_modules/ws')
 
 const token = process.argv[2] || ''
 const fieldValue = process.argv[3] || ''

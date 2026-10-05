@@ -54,7 +54,7 @@ export function createSettingsWindow(): BrowserWindow | null {
   })
 
   win.loadFile(RENDERER_HTML, { hash: '/settings' }).catch(err => {
-    console.error('[clipnest] 设置窗加载渲染产物失败', err)
+    console.error('[pasteman] 设置窗加载渲染产物失败', err)
   })
 
   settingsWin = win

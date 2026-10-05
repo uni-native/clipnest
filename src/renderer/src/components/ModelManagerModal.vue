@@ -120,13 +120,13 @@ let offDownload: (() => void) | null = null
 onMounted(() => {
   void refreshStatus()
                                                              
-  offStatus = window.clipnest.onIntelligenceStatus(s => {
+  offStatus = window.pasteman.onIntelligenceStatus(s => {
     if (!s.models) return
     const map: Record<string, ModelState> = {}
     for (const m of s.models) map[m.id] = m.state
     stateMap.value = map
   })
-  offDownload = window.clipnest.onModelDownload(info => {
+  offDownload = window.pasteman.onModelDownload(info => {
     downloadMap.value = { ...downloadMap.value, [info.modelId]: info }
   })
   void api.common

@@ -31,7 +31,7 @@ function resolveStore(): ClipStore | null {
   try {
     fallbackStore = initStore()
   } catch (err) {
-    console.error('[clipnest] panel 读取设置时 store 不可用', err)
+    console.error('[pasteman] panel 读取设置时 store 不可用', err)
     fallbackStore = null
   }
   return fallbackStore
@@ -44,7 +44,7 @@ export function getSettings(): Settings {
   try {
     return store.getSettings()
   } catch (err) {
-    console.error('[clipnest] 读取设置失败', err)
+    console.error('[pasteman] 读取设置失败', err)
     return DEFAULT_SETTINGS
   }
 }
@@ -88,7 +88,7 @@ export function createPanelWindow(store?: ClipStore): BrowserWindow {
   win.on('blur', () => hidePanel(win))
 
   win.loadFile(RENDERER_HTML).catch(err => {
-    console.error('[clipnest] 面板加载渲染产物失败', err)
+    console.error('[pasteman] 面板加载渲染产物失败', err)
   })
   return win
 }
@@ -115,7 +115,7 @@ export function showPanel(win: BrowserWindow): void {
   try {
     win.webContents.send(IPC.evtShow, layout)
   } catch (err) {
-    console.error('[clipnest] evtShow 发送失败', err)
+    console.error('[pasteman] evtShow 发送失败', err)
   }
 }
 
@@ -124,7 +124,7 @@ export function hidePanel(win: BrowserWindow): void {
   try {
     win.webContents.send(IPC.evtHide)
   } catch (err) {
-    console.error('[clipnest] evtHide 发送失败', err)
+    console.error('[pasteman] evtHide 发送失败', err)
   }
   setTimeout(() => {
     if (!win.isDestroyed()) win.hide()
@@ -149,7 +149,7 @@ export function setLayout(win: BrowserWindow, layout: Layout): { layout: Layout 
   try {
     store?.saveSettings({ clipboard: { layout } })
   } catch (err) {
-    console.error('[clipnest] 保存布局失败', err)
+    console.error('[pasteman] 保存布局失败', err)
   }
   applyLayout(win, layout)
   return { layout }
@@ -162,7 +162,7 @@ export function setTheme(win: BrowserWindow, theme: string): string {
   try {
     store?.saveSettings({ clipboard: { theme: resolved } })
   } catch (err) {
-    console.error('[clipnest] 保存主题失败', err)
+    console.error('[pasteman] 保存主题失败', err)
   }
   return resolved
 }

@@ -40,6 +40,18 @@ const sizeText = computed(() => {
 const previewText = computed(() => props.post.preview || props.post.title || '（无内容）')
 const relTime = computed(() => formatRelative(props.post.lastUsedAt))
 const sourceName = computed(() => props.post.sourceApp || '未知来源')
+const previewError = ref('')
+
+async function openPreview(): Promise<void> {
+  menuOpen.value = false
+  previewError.value = ''
+  try {
+    if (!await api.common.preview(props.post.id)) previewError.value = '预览失败'
+  } catch (error) {
+    console.error('[pasteman] 打开预览失败', error)
+    previewError.value = '预览失败'
+  }
+}
 
                         
 const imgSrc = ref('')
@@ -117,6 +129,8 @@ async function togglePin(): Promise<void> {
     @click="emit('paste', post.id)"
     @contextmenu="onContextmenu"
   >
+    <button class="pc-preview-button" type="button" :aria-label="`预览 ${post.title}`" @click.stop="openPreview">预览</button>
+    <span v-if="previewError" class="pc-preview-error" role="alert">{{ previewError }}</span>
                                         
     <template v-if="layout === 'horizontal'">
       <div class="pc-head">
@@ -160,6 +174,7 @@ async function togglePin(): Promise<void> {
     </template>
 
     <div v-if="menuOpen" class="ctx-menu" :style="{ left: `${menuPos.x}px`, top: `${menuPos.y}px` }">
+      <button class="ctx-item" @click.stop="openPreview">预览内容</button>
       <button class="ctx-item" @click.stop="togglePin">{{ post.pinned === 1 ? '取消收藏' : '收藏' }}</button>
       <button class="ctx-item" @click.stop="moveOpen = !moveOpen">
         移动到分组{{ moveOpen ? ' ▴' : ' ▸' }}
@@ -173,3 +188,10 @@ async function togglePin(): Promise<void> {
     </div>
   </div>
 </template>
+
+<style scoped>
+.pc-preview-button { position: absolute; right: 10px; top: 8px; z-index: 1; border: 1px solid var(--border, #e4e4e7); border-radius: 6px; padding: 3px 8px; background: var(--bg, #fff); color: var(--text, #333); cursor: pointer; font-size: 12px; }
+.pc-head { padding-right: 48px; }
+.pc-preview-button:hover, .pc-preview-button:focus-visible { color: var(--brand); border-color: var(--brand); }
+.pc-preview-error { position: absolute; right: 10px; bottom: 8px; font-size: 12px; color: #b42318; }
+</style>

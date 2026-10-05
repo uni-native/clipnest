@@ -44,10 +44,10 @@ for (const stream of [process.stdout, process.stderr]) {
 }
                                        
 process.on('uncaughtException', err => {
-  console.error('[clipnest] uncaught exception:', err?.message ?? err)
+  console.error('[pasteman] uncaught exception:', err?.message ?? err)
 })
 process.on('unhandledRejection', reason => {
-  console.error('[clipnest] unhandled rejection:', reason)
+  console.error('[pasteman] unhandled rejection:', reason)
 })
 
           
@@ -122,17 +122,17 @@ async function bootstrap(): Promise<void> {
   })
 
   if (SMOKE) {
-    console.log('[clipnest] smoke: bootstrap ok')
+    console.log('[pasteman] smoke: bootstrap ok')
                                          
     setTimeout(async () => {
       const w = BrowserWindow.getAllWindows().find(x => !x.isDestroyed())
       if (!w) {
-        console.error('[clipnest] smoke: no window')
+        console.error('[pasteman] smoke: no window')
         return
       }
       try {
         const result = await w.webContents.executeJavaScript(`(async () => {
-          const b = window.clipnest
+          const b = window.pasteman
           if (!b) return 'no-bridge'
           const v = await b.getVersion()
           const s = await b.querySettings()
@@ -142,13 +142,13 @@ async function bootstrap(): Promise<void> {
           const q = await b.intelligenceQuery({ keyword: '邮箱', limit: 3 })
           return 'bridge-ok version=' + v + ' theme=' + s.clipboard.theme + ' groups=' + g.length + ' posts=' + p.items.length + ' tier=' + st.tier + '/' + st.state + ' indexed=' + st.indexed + '/' + st.total + ' semanticHits=' + q.length
         })()`)
-        console.log('[clipnest] smoke: renderer check ->', result)
+        console.log('[pasteman] smoke: renderer check ->', result)
       } catch (e) {
-        console.error('[clipnest] smoke: renderer check FAILED', e)
+        console.error('[pasteman] smoke: renderer check FAILED', e)
       }
     }, 2500)
     setTimeout(() => {
-      console.log('[clipnest] smoke: done')
+      console.log('[pasteman] smoke: done')
       app.quit()
     }, 4500)
   }
@@ -215,8 +215,8 @@ app.whenReady().then(async () => {
         })
       }
       seedText('todo: refine the panel card layout and spacing before release', 'ZCode')
-      seedText('https://github.com/clipnest/clipnest', 'Microsoft Edge')
-      seedText('ClipNest is a local-first clipboard manager built with Electron 38 and Vue 3.', 'ZCode')
+      seedText('https://github.com/pasteman/pasteman', 'Microsoft Edge')
+      seedText('PasteMan is a local-first clipboard manager built with Electron 38 and Vue 3.', 'ZCode')
       seedImage('resources/icon.png', 'a', 'ZCode')
       seedImage('resources/iconTemplate_win.png', 'b', 'PixPin')
       console.log('[seed-demo] done')
@@ -301,8 +301,8 @@ app.whenReady().then(async () => {
     setTimeout(() => app.quit(), delay + 2500)
   }
 }).catch(error => {
-  console.error('[clipnest] startup failed', error)
-  dialog.showErrorBox('剪巢无法启动', `数据文件读取失败，请保留原文件并检查：\n${dbPath}`)
+  console.error('[pasteman] startup failed', error)
+  dialog.showErrorBox('PasteMan无法启动', `数据文件读取失败，请保留原文件并检查：\n${dbPath}`)
   app.quit()
 })
 

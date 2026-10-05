@@ -23,7 +23,9 @@ export default defineConfig({
                                                         
                                                                         
       rollupOptions: {
-        external: ['koffi', 'better-sqlite3', 'ws', '@huggingface/transformers'],
+        input: { index: resolve(__dirname, 'src/main/index.ts'), 'preview-worker': resolve(__dirname, 'src/main/windows/preview-worker.ts') },
+        output: { entryFileNames: '[name].js' },
+        external: ['koffi', 'better-sqlite3', 'ws', '@huggingface/transformers', 'pdfjs-dist/legacy/build/pdf.mjs', '@napi-rs/canvas'],
       },
     },
   },

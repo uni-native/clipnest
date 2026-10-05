@@ -72,12 +72,19 @@ function renderList() {
   $('list').innerHTML = items.map(item => `
     <article class="item" data-id="${escapeHtml(item.id)}">
       <input class="pick" type="checkbox" aria-label="选择此条" ${state.selected.has(item.id) ? 'checked' : ''} />
-      <span class="type-icon">${typeLabels[item.type] || '文'}</span>
+      ${item.type === 'image' && item.imageUrl ? `<img class="image-thumb" src="${escapeHtml(item.imageUrl)}" alt="图片预览" loading="lazy" decoding="async" />` : `<span class="type-icon">${typeLabels[item.type] || '文'}</span>`}
       <div class="content"><div class="title" title="${escapeHtml(item.title)}">${escapeHtml(item.title || item.preview || '未命名内容')}</div><div class="preview">${escapeHtml(item.preview)}</div></div>
       <span class="source" title="${escapeHtml(item.sourceApp)}">${escapeHtml(item.sourceApp || '未知来源')}</span>
       <time class="time">${formatTime(item.lastUsedAt)}</time>
       <button class="delete-one" type="button" title="删除">×</button>
     </article>`).join('')
+  $('list').querySelectorAll('.image-thumb').forEach(image => image.addEventListener('error', () => {
+    console.error('[web-manager] 图片加载失败', image.getAttribute('src'))
+    const message = document.createElement('span')
+    message.className = 'image-error'
+    message.textContent = '图片失效'
+    image.replaceWith(message)
+  }, { once: true }))
   renderSelection()
 }
 
