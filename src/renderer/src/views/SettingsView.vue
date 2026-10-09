@@ -51,6 +51,7 @@ const section = ref<SectionKey>('clipboard')
 const intel = ref<IntelligenceStatus | null>(null)
 const recError = ref('')
 const soundError = ref('')
+const soundNotice = ref('')
 const copySoundInput = ref<HTMLInputElement | null>(null)
 const pasteSoundInput = ref<HTMLInputElement | null>(null)
 
@@ -125,19 +126,36 @@ function setLayout(l: 'vertical' | 'horizontal'): void {
 }
 
 async function onSoundsOpen(v: boolean): Promise<void> {
+  soundError.value = ''
+  soundNotice.value = ''
   const next = await store.update({ clipboard: { sounds: { open: v } } })
-  if (v && next) void playClipboardSound('copy', next.clipboard.sounds)
+  if (v && next) await previewSound('copy')
+}
+
+async function previewSound(kind: ClipboardSoundKind): Promise<void> {
+  soundError.value = ''
+  soundNotice.value = ''
+  const sounds = settings.value.clipboard.sounds
+  const label = kind === 'copy' ? '复制' : '粘贴'
+  if (!sounds.open) return
+  if (sounds.type === 2 && !sounds[kind]) {
+    soundError.value = `请上传${label}音效`
+    return
+  }
+  if (await playClipboardSound(kind, sounds)) soundNotice.value = `已播放${label}音效`
+  else soundError.value = `${label}音效播放失败，请重新试听`
 }
 
 async function setSound(type: number): Promise<void> {
   soundError.value = ''
+  soundNotice.value = ''
   const next = await store.update({ clipboard: { sounds: { type } } })
   if (!next) return
   if (type === 2 && !next.clipboard.sounds.copy && !next.clipboard.sounds.paste) {
     soundError.value = '请上传复制音效或粘贴音效'
     return
   }
-  void playClipboardSound('copy', next.clipboard.sounds)
+  if (type !== 2) await previewSound('copy')
 }
 
 function readAudioFile(file: File): Promise<string> {
@@ -157,6 +175,7 @@ async function uploadSound(kind: ClipboardSoundKind, event: Event): Promise<void
   input.value = ''
   if (!file) return
   soundError.value = ''
+  soundNotice.value = ''
   const allowed = /\.(mp3|wav|aac|m4a)$/i.test(file.name)
   if (!allowed || file.size > 1024 * 1024) {
     soundError.value = '请选择 1MB 以内的 MP3、WAV 或 AAC 文件'
@@ -166,7 +185,7 @@ async function uploadSound(kind: ClipboardSoundKind, event: Event): Promise<void
     const dataUrl = await readAudioFile(file)
     const sounds = kind === 'copy' ? { type: 2, copy: dataUrl } : { type: 2, paste: dataUrl }
     const next = await store.update({ clipboard: { sounds } })
-    if (next) void playClipboardSound(kind, next.clipboard.sounds)
+    if (next) await previewSound(kind)
   } catch (e) {
     console.error('[settings] sound upload failed', e)
     soundError.value = '音效文件读取失败，请更换文件重试'
@@ -669,6 +688,10 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
+              <div class="sound-preview">
+                <button class="pill-btn sm ghost" type="button" :disabled="!settings.clipboard.sounds.open" @click="previewSound('copy')">试听复制</button>
+                <button class="pill-btn sm ghost" type="button" :disabled="!settings.clipboard.sounds.open" @click="previewSound('paste')">试听粘贴</button>
+              </div>
               <div class="uploads">
                 <button class="upload" type="button" @click="copySoundInput?.click()">
                   <svg class="up-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -689,7 +712,8 @@ onMounted(() => {
                 </button>
                 <input ref="pasteSoundInput" class="sound-file-input" type="file" accept=".mp3,.wav,.aac,.m4a,audio/mpeg,audio/wav,audio/aac,audio/mp4" @change="uploadSound('paste', $event)" />
               </div>
-              <div v-if="soundError" class="sound-error">{{ soundError }}</div>
+              <div v-if="soundError" class="sound-error" role="alert">{{ soundError }}</div>
+              <div v-else-if="soundNotice" class="sound-notice" role="status">{{ soundNotice }}</div>
             </div>
           </div>
 

@@ -39,6 +39,7 @@ export function createSettingsWindow(): BrowserWindow | null {
       sandbox: false,
       preload: PRELOAD_ENTRY,
       backgroundThrottling: false,
+      autoplayPolicy: 'no-user-gesture-required',
     },
   })
 

@@ -464,7 +464,18 @@ function htmlSemanticValues(html: string): string {
 }
 
                                                       
+export function isSearchField(field: FieldCtx): boolean {
+  if ((field.type ?? '').toLowerCase() === 'search') return true
+  if ((field.role ?? '').toLowerCase() === 'searchbox') return true
+  if (/\senterkeyhint\s*=\s*["']search["']/i.test(field.html ?? '')) return true
+  const semantic = [field.label, field.name, htmlSemanticValues(field.html ?? '')].filter(Boolean).join(' ').toLowerCase()
+  return FIELD_KEYWORDS.some(item =>
+    item.expect === 'search' && item.words.some(word => keywordMatches(semantic, word)),
+  )
+}
+
 export function detectFieldType(field: FieldCtx): FieldExpect {
+  if (isSearchField(field)) return 'search'
   const autocomplete = (field.autocomplete ?? '').toLowerCase().split(/\s+/)
   for (const token of autocomplete) {
     const expected = AUTOCOMPLETE_EXPECT[token]

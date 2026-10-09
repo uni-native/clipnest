@@ -767,6 +767,17 @@ html[data-theme='dark'] .settings-nav {
 .sound-file-input {
   display: none;
 }
+.sound-preview {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sound-notice {
+  margin-top: 8px;
+  color: var(--text-2);
+}
+
 .sound-error {
   margin-top: 10px;
   color: #d33f49;

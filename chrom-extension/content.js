@@ -65,6 +65,10 @@
   let positionFrame = 0
   let focusSequence = 0
   let currentFocusId = ''
+  let composing = false
+  // 清空或关闭建议的选择不能因重新聚焦而失效。
+  const editedFields = new WeakSet()
+  const dismissedFields = new WeakSet()
 
   const overlay = { root: null, field: null, reqId: '', items: [], rows: [], selectedIndex: -1, allowSensitive: false }
 
@@ -320,6 +324,37 @@
     }
   }
 
+  function isSearchField(field) {
+    if (getFieldType(field) === 'search') return true
+    if ((field.getAttribute('role') || '').toLowerCase() === 'searchbox') return true
+    if ((field.getAttribute('enterkeyhint') || '').toLowerCase() === 'search') return true
+    if (field.closest('search,[role="search"]')) return true
+    const semantic = [getFieldLabel(field), field.getAttribute('name'), field.id].filter(Boolean).join(' ')
+    return /搜索|搜寻|查询|检索|关键词|关键字|(?:^|[^a-z0-9])(?:search|query|keyword)(?:$|[^a-z0-9])/i.test(semantic)
+  }
+
+  function canAssistField(field) {
+    return isLiveField(field) && !field.disabled && !field.readOnly &&
+      !isSearchField(field) && !dismissedFields.has(field) && !composing
+  }
+
+  function cancelFieldRequest(reason) {
+    clearTimeout(inputTimer)
+    inputTimer = 0
+    clearTimeout(pendingFocusTimer)
+    pendingFocusTimer = 0
+    const hadRequest = !!currentFocusId
+    currentFocusId = ''
+    lastContextSignature = ''
+    hideSuggest()
+    if (hadRequest) send({ t: 'field-blur', reason })
+  }
+
+  function dismissField(reason) {
+    if (currentField) dismissedFields.add(currentField)
+    cancelFieldRequest(reason)
+  }
+
   function isLiveField(field) {
     return !!field && field.isConnected && document.visibilityState === 'visible'
   }
@@ -334,7 +369,7 @@
   }
 
   function emitFieldFocus(field, force = false) {
-    if (!isLiveField(field)) return false
+    if (!canAssistField(field)) return false
     const context = { field: buildFieldCtx(field), page: buildPageCtx() }
     const signature = JSON.stringify(context)
     if (!force && signature === lastContextSignature) return false
@@ -356,16 +391,10 @@
   }
 
   function clearCurrentField(reason) {
-    clearTimeout(inputTimer)
-    inputTimer = 0
-    clearTimeout(pendingFocusTimer)
-    pendingFocusTimer = 0
-    lastContextSignature = ''
-    currentFocusId = ''
+    cancelFieldRequest(reason)
+    composing = false
     if (!currentField) return
     currentField = null
-    hideSuggest()
-    send({ t: 'field-blur', reason })
   }
 
                                                                                   
@@ -385,13 +414,15 @@
       return
     }
     const changed = field !== currentField
-    if (changed) hideSuggest()
+    if (changed) clearCurrentField('切换输入框')
     currentField = field
+    if (applyingFill) return
     if (!hasRecentUserIntent()) return
     emitFieldFocus(field)
   }
 
   function onFocusOut() {
+    cancelFieldRequest('输入框失焦')
     clearTimeout(blurTimer)
                                        
     blurTimer = setTimeout(() => {
@@ -405,7 +436,14 @@
     const path = typeof event.composedPath === 'function' ? event.composedPath() : []
     if (applyingFill || !currentField || (event.target !== currentField && !path.includes(currentField))) return
     markUserIntent(event)
-    clearTimeout(inputTimer)
+    editedFields.add(currentField)
+    cancelFieldRequest('输入内容已改变')
+    if (!getFieldValue(currentField).trim()) {
+      dismissedFields.add(currentField)
+      return
+    }
+    dismissedFields.delete(currentField)
+    if (event.isComposing || !canAssistField(currentField)) return
     inputTimer = setTimeout(() => {
       inputTimer = 0
       if (!isLiveField(currentField)) {
@@ -429,6 +467,7 @@
       send({ t: 'fill-result', reqId: msg.reqId, ok: false, err: '输入框已失焦或离开页面' })
       return
     }
+    if (!canAssistField(field) || editedFields.has(field) || getFieldValue(field).trim()) return
     if (!resolveTextField(field)) {
       currentField = null
       return
@@ -443,6 +482,7 @@
       hideSuggest()
       send({ t: 'fill-result', reqId: msg.reqId, ok: true })
     } catch (e) {
+      console.error('[PasteMan] 填充输入框失败', e)
       send({ t: 'fill-result', reqId: msg.reqId, ok: false, err: String((e && e.message) || e) })
     }
   }
@@ -463,16 +503,21 @@
         moveCaretToEnd(el)
       } else {
         setNativeValue(el, next)
-        try {
-          const n = el.value.length
-          el.setSelectionRange(n, n)
-        } catch {
-                                      
-        }
+        moveInputCaretToEnd(el)
       }
       dispatchInputEvents(el)
     } finally {
       applyingFill = false
+    }
+  }
+
+  function moveInputCaretToEnd(el) {
+    if (typeof el.selectionStart !== 'number' || typeof el.setSelectionRange !== 'function') return
+    try {
+      const end = String(el.value || '').length
+      el.setSelectionRange(end, end)
+    } catch (e) {
+      console.error('[PasteMan] 设置输入光标失败', e)
     }
   }
 
@@ -510,8 +555,8 @@
       range.collapse(false)
       sel.removeAllRanges()
       sel.addRange(range)
-    } catch {
-              
+    } catch (e) {
+      console.error('[PasteMan] 设置编辑光标失败', e)
     }
   }
 
@@ -527,6 +572,7 @@
       clearCurrentField('显示建议时输入框不可用')
       return
     }
+    if (!canAssistField(field)) return
     const items = Array.isArray(msg.items) ? msg.items.slice(0, SUGGEST_MAX) : []
     if (!items.length) {
       hideSuggest()
@@ -573,7 +619,6 @@
     overlay.rows = rows
     overlay.selectedIndex = -1
     overlay.allowSensitive = allowSensitive
-    setSuggestionSelection(0)
     positionOverlay(root, field)
   }
 
@@ -630,8 +675,9 @@
   }
 
   function moveSuggestionSelection(delta) {
-    const start = overlay.selectedIndex < 0 ? 0 : overlay.selectedIndex
-    setSuggestionSelection(start + delta)
+    setSuggestionSelection(overlay.selectedIndex < 0
+      ? delta < 0 ? overlay.items.length - 1 : 0
+      : overlay.selectedIndex + delta)
   }
 
   function pickSelectedSuggestion() {
@@ -665,7 +711,7 @@
   }
 
   function focusRelativeField(delta) {
-    if (!currentField) return false
+    if (!canAssistField(currentField)) return false
     const fields = collectNavigableFields()
     if (fields.length < 2) return false
     const filled = fields.filter(field => getFieldValue(field).trim())
@@ -683,14 +729,7 @@
     if (!next || next === currentField) return false
     hideSuggest()
     next.focus()
-    if (!next.isContentEditable && typeof next.setSelectionRange === 'function') {
-      try {
-        const end = String(next.value || '').length
-        next.setSelectionRange(end, end)
-      } catch (e) {
-        console.error('[PasteMan] 移动输入光标失败', e)
-      }
-    }
+    if (!next.isContentEditable) moveInputCaretToEnd(next)
     next.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     return true
   }
@@ -706,6 +745,7 @@
       applyFill(field, typeof item.value === 'string' ? item.value : '', 'replace', allowSensitive === true)
       send({ t: 'fill-result', reqId, ok: true })
     } catch (e) {
+      console.error('[PasteMan] 填入候选失败', e)
       send({ t: 'fill-result', reqId, ok: false, err: String((e && e.message) || e) })
     }
     send({ t: 'suggest-pick', reqId, itemId: item.id })
@@ -755,6 +795,26 @@
   document.addEventListener('focusin', onFocusIn, true)
   document.addEventListener('focusout', onFocusOut, true)
   document.addEventListener('input', onFieldInput, true)
+  document.addEventListener('beforeinput', (event) => {
+    if (applyingFill || !currentField || !event.composedPath().includes(currentField)) return
+    editedFields.add(currentField)
+    cancelFieldRequest('用户正在编辑')
+  }, true)
+  document.addEventListener('compositionstart', (event) => {
+    if (!currentField || !event.composedPath().includes(currentField)) return
+    composing = true
+    editedFields.add(currentField)
+    cancelFieldRequest('用户正在输入')
+  }, true)
+  document.addEventListener('compositionend', (event) => {
+    composing = false
+    onFieldInput(event)
+  }, true)
+  document.addEventListener('reset', (event) => {
+    if (event.defaultPrevented || !currentField || currentField.form !== event.target) return
+    editedFields.add(currentField)
+    dismissField('表单已重置')
+  })
   document.addEventListener('pointerdown', markUserIntent, true)
   document.addEventListener('keydown', markUserIntent, true)
 
@@ -762,7 +822,7 @@
   document.addEventListener(
     'mousedown',
     (e) => {
-      if (overlay.root && !overlay.root.contains(e.target)) hideSuggest()
+      if (overlay.root && !overlay.root.contains(e.target)) dismissField('用户关闭建议')
     },
     true,
   )
@@ -771,6 +831,7 @@
   document.addEventListener(
     'keydown',
     (e) => {
+      if (e.isComposing || composing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
       if (overlay.root && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
         e.preventDefault()
         e.stopPropagation()
@@ -784,7 +845,7 @@
         e.preventDefault()
         e.stopPropagation()
       } else if (overlay.root && e.key === 'Escape') {
-        hideSuggest()
+        dismissField('用户关闭建议')
         e.stopPropagation()
       }
     },

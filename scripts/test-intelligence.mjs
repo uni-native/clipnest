@@ -4,6 +4,7 @@ import {
   extractCandidateFragments,
   isCandidateCompatible,
   isFillForbidden,
+  isSearchField,
   scoreCandidate,
 } from '../src/main/intelligence/matchers.ts'
 
@@ -271,6 +272,23 @@ assert.equal(
   ),
   false,
 )
+
+const searchFields = [
+  { type: 'search', label: 'Email address', autocomplete: 'email' },
+  { role: 'searchbox', label: 'Find a contact' },
+  { label: '搜索邮箱', name: 'email' },
+  { label: 'Search email', name: 'email' },
+  { label: '查询', name: 'query' },
+  { html: '<input type="text" enterkeyhint="search">' },
+  { html: '<textarea aria-label="Search" name="q"></textarea>' },
+]
+for (const attrs of searchFields) {
+  const field = { id: '#search', tag: 'input', type: 'text', name: '', label: '', value: '', maxLength: 0, ...attrs }
+  assert.equal(isSearchField(field), true)
+  assert.equal(detectFieldType(field), 'search')
+}
+assert.equal(isSearchField({ id: '#email', tag: 'input', type: 'email', name: 'email', label: 'Work email', value: '', maxLength: 0 }), false)
+assert.equal(isSearchField({ id: '#name', tag: 'input', type: 'text', name: 'researcher_name', label: 'Researcher name', value: '', maxLength: 0 }), false)
 
 const workField = {
   expect: 'email',
