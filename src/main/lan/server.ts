@@ -66,7 +66,6 @@ let httpServer: http.Server | null = null
 let phonePush: { ip: string; port: number; device: string; at: number } | null = null
 let udp: DgramSocket | null = null
 let heartbeat: ReturnType<typeof setInterval> | null = null
-let panel: BrowserWindow | null = null
 const clients = new Map<WsSocket, ClientInfo>()
 // 收到端的 capture 域 hash → 收到时刻（notifyLocalCapture 命中则跳过）
 const recentRemote = new Map<string, number>()
@@ -133,8 +132,12 @@ function send(ws: WsSocket, msg: WireOut): void {
 }
 
 function broadcastStatus(): void {
-  if (!panel || panel.isDestroyed()) return
-  panel.webContents.send(IPC.evtLanStatus, getStatus())
+  const status = getStatus()
+  // 连接状态需要送到设置窗口，否则手机连接后仍会显示等待连接。
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.isDestroyed()) continue
+    window.webContents.send(IPC.evtLanStatus, status)
+  }
 }
 
 function getStatus(): LanStatus {
@@ -646,10 +649,6 @@ async function pushClipToPhone(msg: WireClip): Promise<void> {
   }
 }
 
-function attachPanel(next: BrowserWindow | null): void {
-  panel = next
-}
-
 export interface LanSyncHandle {
   stop(): void
   notifyLocalCapture(post: Post): void
@@ -657,7 +656,6 @@ export interface LanSyncHandle {
 
 export function startLanSync(next: LanDeps & { panel?: BrowserWindow }): LanSyncHandle {
   deps = next
-  attachPanel(next.panel ?? null)
 
   const c = cfg()
   if (!c.token) savePatch({ token: newToken() })

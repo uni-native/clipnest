@@ -9,6 +9,7 @@ const WebSocket = require('ws')
 const root = path.resolve(__dirname, '..')
 const handlers = new Map()
 const messages = []
+const statusEvents = [[],[]]
 const clipboard = { value: '', writeText(value) { this.value = value }, writeImage() {} }
 const settings = { lanSync: { enabled: false, port: 0, token: '', pin: '', deviceName: 'QA-PC', sendEnabled: true, receiveEnabled: true } }
 const code = esbuild.buildSync({entryPoints:[path.join(root,'src/main/lan/server.ts')],bundle:true,write:false,format:'cjs',platform:'node',external:['electron','ws'],alias:{'@shared':path.join(root,'src/shared')}}).outputFiles[0].text
@@ -16,7 +17,7 @@ const moduleFixture = {exports:{}}
 vm.runInNewContext(code, {
   module:moduleFixture,exports:moduleFixture.exports,Buffer,URL,AbortController,fetch,console,process,setTimeout,clearTimeout,setInterval,clearInterval,
   require(name) {
-    if(name==='electron') return {app:{getAppPath:()=>root},clipboard,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},nativeImage:{createFromBuffer:()=>({isEmpty:()=>false})}}
+    if(name==='electron') return {app:{getAppPath:()=>root},BrowserWindow:{getAllWindows:()=>statusEvents.map(events=>({isDestroyed:()=>false,webContents:{send:(_channel,status)=>events.push(status)}}))},clipboard,ipcMain:{handle:(name,handler)=>handlers.set(name,handler)},nativeImage:{createFromBuffer:()=>({isEmpty:()=>false})}}
     if(name==='node:dgram') return {createSocket:()=>({on(){return this},bind(_port,ready){ready()},setBroadcast(){},close(){},send(){}})}
     return require(name)
   },
@@ -57,6 +58,7 @@ async function main() {
   assert.equal((await next('auth-fail')).reason,'pin')
   socket.send(JSON.stringify({t:'pair',pin:settings.lanSync.pin,device:'QA-phone'}))
   assert.equal((await next('paired')).token,token)
+  assert.ok(statusEvents.every(events=>events.some(status=>status.clients.length===1)), 'Both panel and settings receive connected status')
   const text = 'LAN test clipboard'
   socket.send(JSON.stringify({t:'clip',id:'qa',ts:Date.now(),kind:'text',text,hash:crypto.createHash('sha256').update(text).digest('hex')}))
   await wait(50); assert.equal(clipboard.value,text)
