@@ -6,6 +6,7 @@ import type {
   DeepPartial,
   Group,
   IntelligenceStatus,
+  LanStatus,
   Layout,
   ModelDownloadInfo,
   ModelDownloadResult,
@@ -94,6 +95,12 @@ const bridge: PasteManBridge = {
   browserRegenerateToken: () => invoke<string>(IPC.browserRegenerateToken),
   browserPing: () => invoke<boolean>(IPC.browserPing),
 
+  lanStatus: () => invoke<LanStatus>(IPC.lanStatus),
+  lanSetConfig: (patch: DeepPartial<Settings['lanSync']>) =>
+    invoke<LanStatus>(IPC.lanSetConfig, patch),
+  lanRegenerateToken: () => invoke<string>(IPC.lanRegenerateToken),
+  lanRegeneratePin: () => invoke<string>(IPC.lanRegeneratePin),
+
               
   onPostCaptured: cb =>
     subscribe(IPC.evtPostCaptured, (e: Parameters<typeof cb>[0]) => cb(e)),
@@ -109,6 +116,7 @@ const bridge: PasteManBridge = {
   onModelDownload: cb =>
     subscribe(IPC.evtModelDownload, (s: ModelDownloadInfo) => cb(s)),
   onBrowserStatus: cb => subscribe(IPC.evtBrowserStatus, (s: BrowserStatus) => cb(s)),
+  onLanStatus: cb => subscribe(IPC.evtLanStatus, (s: LanStatus) => cb(s)),
 }
 
 contextBridge.exposeInMainWorld('pasteman', bridge)

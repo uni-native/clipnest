@@ -4,6 +4,7 @@ import type {
   DeepPartial,
   Group,
   IntelligenceStatus,
+  LanStatus,
   Layout,
   ModelDownloadResult,
   ModelStatusInfo,
@@ -73,6 +74,12 @@ export const api = {
     setConfig: (patch: DeepPartial<Settings['browser']>) => bridge.browserSetConfig(patch),
     regenerateToken: () => bridge.browserRegenerateToken(),
     ping: () => bridge.browserPing(),
+  },
+  lan: {
+    status: (): Promise<LanStatus> => bridge.lanStatus(),
+    setConfig: (patch: DeepPartial<Settings['lanSync']>) => bridge.lanSetConfig(patch),
+    regenerateToken: () => bridge.lanRegenerateToken(),
+    regeneratePin: () => bridge.lanRegeneratePin(),
   },
   common: {
     openExternal: (url: string) => bridge.openExternal(url),
