@@ -71,10 +71,12 @@ function readSnapshot(): ClipboardSnapshot | null {
     try {
       if (formats.includes('image/png')) {
         const image = clipboard.readImage()
-        if (!image.isEmpty()) imageDataUrl = image.toDataURL()
+        if (image.isEmpty()) return null
+        imageDataUrl = image.toDataURL()
       }
     } catch (error) {
       console.error('[capture] 读取图片失败', error)
+      return null
     }
     return { formats, text, html, filePath, imageDataUrl }
   } catch (e) {
@@ -97,6 +99,7 @@ export function startListening(onSnapshot: SnapshotHandler): { stop(): void } {
 
   let getSeq: (() => unknown) | null = null
   let lastSeq = -1
+  let unreadSeq: number | null = null
   try {
     const fn = lib.func('uint32 __stdcall GetClipboardSequenceNumber()')
     lastSeq = Number(fn())
@@ -138,10 +141,12 @@ export function startListening(onSnapshot: SnapshotHandler): { stop(): void } {
       return
     }
     if (seq === lastSeq) return
-    lastSeq = seq
     const snapshot = readSnapshot()
     if (!snapshot) {
-      console.warn('[capture] 剪贴板变更未读取到内容', { sequence: seq, nativeFormats: clipboardFormatNames() })
+      if (unreadSeq !== seq) {
+        console.warn('[capture] 剪贴板内容暂不可读，保留本次变更等待读取', { sequence: seq, nativeFormats: clipboardFormatNames() })
+        unreadSeq = seq
+      }
       return
     }
     snapshot.sequence = seq
@@ -150,6 +155,9 @@ export function startListening(onSnapshot: SnapshotHandler): { stop(): void } {
       return
     }
     queue.push(snapshot)
+    // Reading can fail while another app owns the clipboard; only consume a completed snapshot.
+    lastSeq = seq
+    unreadSeq = null
     void drain()
   }, POLL_INTERVAL_MS)
 
