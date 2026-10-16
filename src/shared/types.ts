@@ -228,7 +228,17 @@ export interface Settings {
     enabled: boolean
     port: number
   }
-                        
+
+  lanSync: {
+    enabled: boolean
+    port: number
+    token: string
+    pin: string
+    deviceName: string
+    sendEnabled: boolean
+    receiveEnabled: boolean
+  }
+
   jev: {
     enabled: boolean
     mode: 'rule' | 'model'
@@ -333,6 +343,15 @@ export const DEFAULT_SETTINGS: Settings = {
   webManager: {
     enabled: true,
     port: 9378,
+  },
+  lanSync: {
+    enabled: false,
+    port: 48778,
+    token: '',
+    pin: '',
+    deviceName: 'PasteMan-PC',
+    sendEnabled: true,
+    receiveEnabled: true,
   },
   jev: {
     enabled: true,
@@ -504,6 +523,24 @@ export interface BrowserStatus {
   client: { ua: string; extVersion: string; connectedAt: number } | null
 }
 
+export interface LanClientInfo {
+  device: string
+  address: string
+  connectedAt: number
+}
+
+export interface LanStatus {
+  enabled: boolean
+  listening: boolean
+  port: number
+  token: string
+  pin: string
+  deviceName: string
+  sendEnabled: boolean
+  receiveEnabled: boolean
+  clients: LanClientInfo[]
+}
+
                                                                                   
 
 export const IPC = {
@@ -556,6 +593,10 @@ export const IPC = {
   browserSetConfig: 'browser:set-config',
   browserRegenerateToken: 'browser:regenerate-token',
   browserPing: 'browser:ping',
+  lanStatus: 'lan:status',
+  lanSetConfig: 'lan:set-config',
+  lanRegenerateToken: 'lan:regenerate-token',
+  lanRegeneratePin: 'lan:regenerate-pin',
   readImageDataUrl: 'content:read-image',
   previewPost: 'content:preview-post',
                                   
@@ -570,6 +611,7 @@ export const IPC = {
   evtIntelligenceStatus: 'event:intelligence-status',
   evtModelDownload: 'event:model-download',
   evtBrowserStatus: 'event:browser-status',
+  evtLanStatus: 'event:lan-status',
 } as const
 
                                                                                              
@@ -646,6 +688,10 @@ export interface PasteManBridge {
   browserSetConfig(patch: DeepPartial<Settings['browser']>): Promise<BrowserStatus>
   browserRegenerateToken(): Promise<string>
   browserPing(): Promise<boolean>
+  lanStatus(): Promise<LanStatus>
+  lanSetConfig(patch: DeepPartial<Settings['lanSync']>): Promise<LanStatus>
+  lanRegenerateToken(): Promise<string>
+  lanRegeneratePin(): Promise<string>
                                                         
   readImageDataUrl(path: string): Promise<string | null>
   previewPost(id: string): Promise<boolean>
@@ -661,6 +707,7 @@ export interface PasteManBridge {
   onIntelligenceStatus(cb: (s: IntelligenceStatus) => void): () => void
   onModelDownload(cb: (s: ModelDownloadInfo) => void): () => void
   onBrowserStatus(cb: (s: BrowserStatus) => void): () => void
+  onLanStatus(cb: (s: LanStatus) => void): () => void
 }
 
 declare global {

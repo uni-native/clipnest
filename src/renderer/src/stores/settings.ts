@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type {
   BrowserStatus,
   DeepPartial,
+  LanStatus,
   Layout,
   Settings,
   ThemeType,
@@ -61,6 +62,15 @@ function fallbackSettings(): Settings {
       enabled: true,
       port: 9378,
     },
+    lanSync: {
+      enabled: false,
+      port: 48778,
+      token: '',
+      pin: '',
+      deviceName: 'PasteMan-PC',
+      sendEnabled: true,
+      receiveEnabled: true,
+    },
     jev: {
       enabled: true,
       mode: 'rule',
@@ -80,6 +90,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>(fallbackSettings())
   const ready = ref(false)
   const browserStatus = ref<BrowserStatus | null>(null)
+  const lanStatus = ref<LanStatus | null>(null)
 
   const theme = computed<ThemeType>(() => settings.value.clipboard.theme)
   const resolvedTheme = computed<'light' | 'dark'>(() => {
@@ -93,6 +104,7 @@ export const useSettingsStore = defineStore('settings', () => {
   let media: MediaQueryList | null = null
   let offSettings: (() => void) | null = null
   let offBrowser: (() => void) | null = null
+  let offLan: (() => void) | null = null
 
   function applyDom(): void {
     document.documentElement.dataset.theme = resolvedTheme.value
@@ -135,6 +147,18 @@ export const useSettingsStore = defineStore('settings', () => {
     })
   }
 
+  async function initLan(): Promise<void> {
+    try {
+      lanStatus.value = await api.lan.status()
+    } catch (e) {
+      console.error('[settings] lan status failed', e)
+    }
+    offLan?.()
+    offLan = bridge.onLanStatus((s: LanStatus) => {
+      lanStatus.value = s
+    })
+  }
+
                                           
   function applyLayoutFromMain(l: Layout): void {
     if (settings.value.clipboard.layout !== l) settings.value.clipboard.layout = l
@@ -157,6 +181,8 @@ export const useSettingsStore = defineStore('settings', () => {
     offSettings = null
     offBrowser?.()
     offBrowser = null
+    offLan?.()
+    offLan = null
     media?.removeEventListener('change', applyDom)
     media = null
   }
@@ -165,6 +191,7 @@ export const useSettingsStore = defineStore('settings', () => {
     settings,
     ready,
     browserStatus,
+    lanStatus,
     theme,
     resolvedTheme,
     layout,
@@ -174,6 +201,7 @@ export const useSettingsStore = defineStore('settings', () => {
     update,
     watchBridge,
     initBrowser,
+    initLan,
     applyLayoutFromMain,
     dispose,
   }

@@ -23,6 +23,7 @@ import { registerIpcHandlers } from '@main/ipc'
 import { startCapture } from '@main/capture'
 import { createPasteEngine } from '@main/paste'
 import { startBrowserBridge } from '@main/bridge/server'
+import { startLanSync, type LanSyncHandle } from '@main/lan/server'
 import { createJevPipeline } from '@main/intelligence/jev'
 import { getDecisionBackend } from '@main/intelligence/onnx'
 import { createHub } from '@main/intelligence/hub'
@@ -74,6 +75,7 @@ let capture: { stop(): void } | null = null
 let panelWindow: BrowserWindow | null = null
 let browserBridgeStop: (() => void) | null = null
 let webManager: WebManagerHandle | null = null
+let lanSync: LanSyncHandle | null = null
 
 async function bootstrap(): Promise<void> {
   ensureDirs()
@@ -97,6 +99,7 @@ async function bootstrap(): Promise<void> {
   createTray(panel)
 
   const paste = createPasteEngine()
+  lanSync = startLanSync({ store, panel })
   registerIpcHandlers({ store, panel, paste, hub })
 
                                                    
@@ -116,6 +119,7 @@ async function bootstrap(): Promise<void> {
   capture = startCapture(store, (e: CaptureEvent) => {
     if (e.reason === 'created') {
       hub.indexPost(e.post)
+      lanSync?.notifyLocalCapture(e.post)
       panel.webContents.send(IPC.evtPostCaptured, e)
     } else {
       panel.webContents.send(IPC.evtPostTouched, e.post.id)
@@ -315,6 +319,8 @@ app.on('before-quit', () => {
   capture?.stop()
   browserBridgeStop?.()
   browserBridgeStop = null
+  lanSync?.stop()
+  lanSync = null
   webManager?.stop()
   webManager = null
   store?.close()

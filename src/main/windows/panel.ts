@@ -77,6 +77,7 @@ export function createPanelWindow(store?: ClipStore): BrowserWindow {
       sandbox: false,
       preload: PRELOAD_ENTRY,
       backgroundThrottling: false,
+      autoplayPolicy: 'no-user-gesture-required',
     },
   })
 

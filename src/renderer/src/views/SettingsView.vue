@@ -9,12 +9,13 @@ import Toggle from '../components/Toggle.vue'
 import HotkeyRecorder from '../components/HotkeyRecorder.vue'
 import ModelManagerModal from '../components/ModelManagerModal.vue'
 
-type SectionKey = 'clipboard' | 'shortcuts' | 'browser' | 'general' | 'intelligence'
+type SectionKey = 'clipboard' | 'shortcuts' | 'browser' | 'lan' | 'general' | 'intelligence'
 
 const NAV: Array<{ key: SectionKey; label: string; icon: string }> = [
   { key: 'clipboard', label: '剪切版', icon: 'clipboard' },
   { key: 'shortcuts', label: '快捷键', icon: 'keyboard' },
   { key: 'browser', label: '浏览器', icon: 'globe' },
+  { key: 'lan', label: '手机同步', icon: 'phone' },
   { key: 'general', label: '通用', icon: 'gear' },
   { key: 'intelligence', label: '智能', icon: 'spark' },
 ]
@@ -45,12 +46,13 @@ const THEMES: Array<{ value: ThemeType; label: string; icon: string }> = [
 type GeneralKey = 'autoOpen' | 'minTray' | 'menuIcon' | 'launchAtLogin'
 
 const store = useSettingsStore()
-const { settings, browserStatus } = storeToRefs(store)
+const { settings, browserStatus, lanStatus } = storeToRefs(store)
 
 const section = ref<SectionKey>('clipboard')
 const intel = ref<IntelligenceStatus | null>(null)
 const recError = ref('')
 const soundError = ref('')
+const soundNotice = ref('')
 const copySoundInput = ref<HTMLInputElement | null>(null)
 const pasteSoundInput = ref<HTMLInputElement | null>(null)
 
@@ -80,6 +82,7 @@ onMounted(() => {
   window.addEventListener('hashchange', onHashChange)
   void refreshIntel()
   void store.initBrowser()
+  void store.initLan()
   void api.common.version().then(version => { APP_VERSION.value = `v${version}` })
     .catch(error => console.error('[settings] 读取版本失败', error))
   offIntel = window.pasteman.onIntelligenceStatus((s) => (intel.value = s))
@@ -107,6 +110,82 @@ function onWebManagerEnabled(enabled: boolean): void {
   patch({ webManager: { enabled } })
 }
 
+type LanConnState = 'on' | 'off' | 'err'
+
+const lanCopiedTip = ref('')
+
+const lanConnState = computed<LanConnState>(() => {
+  if (!lanStatus.value?.enabled) return 'off'
+  return (lanStatus.value.clients?.length ?? 0) > 0 ? 'on' : 'off'
+})
+
+const lanConnText = computed(() =>
+  lanConnState.value === 'on' ? `已连接 ${lanStatus.value?.clients.length} 台设备` : lanStatus.value?.enabled ? '等待手机连接' : '未启用',
+)
+
+const lanClientsText = computed(() => {
+  const list = lanStatus.value?.clients ?? []
+  if (list.length === 0) return ''
+  return list.map((c) => `${c.device}（${c.address}）`).join('、')
+})
+
+async function applyLanConfig(configPatch: DeepPartial<Settings['lanSync']>): Promise<void> {
+  try {
+    lanStatus.value = await api.lan.setConfig(configPatch)
+  } catch (e) {
+    console.error('[settings] lan config failed', e)
+  }
+}
+
+function onLanEnabled(v: boolean): void {
+  void applyLanConfig({ enabled: v })
+}
+
+function onLanSend(v: boolean): void {
+  void applyLanConfig({ sendEnabled: v })
+}
+
+function onLanReceive(v: boolean): void {
+  void applyLanConfig({ receiveEnabled: v })
+}
+
+function onLanPortChange(e: Event): void {
+  const v = Number((e.target as HTMLInputElement).value)
+  if (Number.isFinite(v) && v >= 1 && v <= 65535) void applyLanConfig({ port: v })
+}
+
+function onLanDeviceName(e: Event): void {
+  const v = (e.target as HTMLInputElement).value.trim()
+  void applyLanConfig({ deviceName: v || 'PasteMan-PC' })
+}
+
+async function onRegenLanPin(): Promise<void> {
+  try {
+    const pin = await api.lan.regeneratePin()
+    if (lanStatus.value) lanStatus.value = { ...lanStatus.value, pin }
+  } catch (e) {
+    console.error('[settings] lan regen pin failed', e)
+  }
+}
+
+async function onRegenLanToken(): Promise<void> {
+  try {
+    const token = await api.lan.regenerateToken()
+    if (lanStatus.value) lanStatus.value = { ...lanStatus.value, token }
+  } catch (e) {
+    console.error('[settings] lan regen token failed', e)
+  }
+}
+
+async function onCopyLanToken(): Promise<void> {
+  const token = lanStatus.value?.token ?? ''
+  if (!token) {
+    lanCopiedTip.value = '令牌为空，请先重新生成'
+    return
+  }
+  lanCopiedTip.value = (await copyText(token)) ? '已复制到剪贴板' : '复制失败，请手动复制'
+}
+
 function onWebManagerPortChange(e: Event): void {
   const port = Number((e.target as HTMLInputElement).value)
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -125,19 +204,36 @@ function setLayout(l: 'vertical' | 'horizontal'): void {
 }
 
 async function onSoundsOpen(v: boolean): Promise<void> {
+  soundError.value = ''
+  soundNotice.value = ''
   const next = await store.update({ clipboard: { sounds: { open: v } } })
-  if (v && next) void playClipboardSound('copy', next.clipboard.sounds)
+  if (v && next) await previewSound('copy')
+}
+
+async function previewSound(kind: ClipboardSoundKind): Promise<void> {
+  soundError.value = ''
+  soundNotice.value = ''
+  const sounds = settings.value.clipboard.sounds
+  const label = kind === 'copy' ? '复制' : '粘贴'
+  if (!sounds.open) return
+  if (sounds.type === 2 && !sounds[kind]) {
+    soundError.value = `请上传${label}音效`
+    return
+  }
+  if (await playClipboardSound(kind, sounds)) soundNotice.value = `已播放${label}音效`
+  else soundError.value = `${label}音效播放失败，请重新试听`
 }
 
 async function setSound(type: number): Promise<void> {
   soundError.value = ''
+  soundNotice.value = ''
   const next = await store.update({ clipboard: { sounds: { type } } })
   if (!next) return
   if (type === 2 && !next.clipboard.sounds.copy && !next.clipboard.sounds.paste) {
     soundError.value = '请上传复制音效或粘贴音效'
     return
   }
-  void playClipboardSound('copy', next.clipboard.sounds)
+  if (type !== 2) await previewSound('copy')
 }
 
 function readAudioFile(file: File): Promise<string> {
@@ -157,6 +253,7 @@ async function uploadSound(kind: ClipboardSoundKind, event: Event): Promise<void
   input.value = ''
   if (!file) return
   soundError.value = ''
+  soundNotice.value = ''
   const allowed = /\.(mp3|wav|aac|m4a)$/i.test(file.name)
   if (!allowed || file.size > 1024 * 1024) {
     soundError.value = '请选择 1MB 以内的 MP3、WAV 或 AAC 文件'
@@ -166,7 +263,7 @@ async function uploadSound(kind: ClipboardSoundKind, event: Event): Promise<void
     const dataUrl = await readAudioFile(file)
     const sounds = kind === 'copy' ? { type: 2, copy: dataUrl } : { type: 2, paste: dataUrl }
     const next = await store.update({ clipboard: { sounds } })
-    if (next) void playClipboardSound(kind, next.clipboard.sounds)
+    if (next) await previewSound(kind)
   } catch (e) {
     console.error('[settings] sound upload failed', e)
     soundError.value = '音效文件读取失败，请更换文件重试'
@@ -669,6 +766,10 @@ onMounted(() => {
                   </div>
                 </div>
               </div>
+              <div class="sound-preview">
+                <button class="pill-btn sm ghost" type="button" :disabled="!settings.clipboard.sounds.open" @click="previewSound('copy')">试听复制</button>
+                <button class="pill-btn sm ghost" type="button" :disabled="!settings.clipboard.sounds.open" @click="previewSound('paste')">试听粘贴</button>
+              </div>
               <div class="uploads">
                 <button class="upload" type="button" @click="copySoundInput?.click()">
                   <svg class="up-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -689,7 +790,8 @@ onMounted(() => {
                 </button>
                 <input ref="pasteSoundInput" class="sound-file-input" type="file" accept=".mp3,.wav,.aac,.m4a,audio/mpeg,audio/wav,audio/aac,audio/mp4" @change="uploadSound('paste', $event)" />
               </div>
-              <div v-if="soundError" class="sound-error">{{ soundError }}</div>
+              <div v-if="soundError" class="sound-error" role="alert">{{ soundError }}</div>
+              <div v-else-if="soundNotice" class="sound-notice" role="status">{{ soundNotice }}</div>
             </div>
           </div>
 
@@ -1201,6 +1303,83 @@ onMounted(() => {
                   <button class="pill-btn sm ghost" type="button" @click="section = 'intelligence'">前往智能</button>
                 </div>
                 <p v-else class="tip mode-tip">当前使用规则与内置向量，无需下载模型</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section v-show="section === 'lan'" class="pane-grid single page-browser">
+          <div class="col">
+            <div class="card card-browser">
+              <div class="card-head">
+                <div class="card-heading">
+                  <span class="card-dot" style="background: #35c26f"></span>
+                  <span class="card-title">手机同步</span>
+                </div>
+                <div class="connection-summary">
+                  <span class="conn-dot" :class="lanConnState"></span>
+                  <span>{{ lanConnText }}</span>
+                </div>
+              </div>
+              <div class="brow-rows">
+                <div class="srow">
+                  <span class="srow-label">启用局域网同步</span>
+                  <div class="srow-ctrl">
+                    <Toggle :model-value="lanStatus?.enabled ?? false" @update:model-value="onLanEnabled" />
+                  </div>
+                  <span class="srow-grow"></span>
+                  <span class="srow-label">端口</span>
+                  <div class="srow-ctrl">
+                    <input
+                      class="ipt num"
+                      type="number"
+                      min="1"
+                      max="65535"
+                      :value="lanStatus?.port ?? 48778"
+                      @change="onLanPortChange"
+                    />
+                  </div>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">自动发送到手机</span>
+                  <div class="srow-ctrl">
+                    <Toggle :model-value="lanStatus?.sendEnabled ?? true" @update:model-value="onLanSend" />
+                  </div>
+                  <span class="srow-grow"></span>
+                  <span class="srow-label">自动接收自手机</span>
+                  <div class="srow-ctrl">
+                    <Toggle :model-value="lanStatus?.receiveEnabled ?? true" @update:model-value="onLanReceive" />
+                  </div>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">配对码</span>
+                  <div class="srow-ctrl brow-token">
+                    <input class="ipt mono" type="text" readonly :value="lanStatus?.pin ?? ''" placeholder="启用后自动生成" />
+                    <button class="pill-btn sm ghost" type="button" @click="onRegenLanPin">重新生成</button>
+                  </div>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">连接令牌</span>
+                  <div class="srow-ctrl brow-token">
+                    <input class="ipt mono" type="text" readonly :value="lanStatus?.token ?? ''" placeholder="配对成功后自动交换" />
+                    <button class="pill-btn sm" type="button" @click="onCopyLanToken">复制</button>
+                    <button class="pill-btn sm ghost" type="button" @click="onRegenLanToken">重新生成</button>
+                  </div>
+                </div>
+                <div class="srow">
+                  <span class="srow-label">电脑设备名</span>
+                  <div class="srow-ctrl">
+                    <input class="ipt" type="text" :value="lanStatus?.deviceName ?? ''" @change="onLanDeviceName" />
+                  </div>
+                </div>
+                <div class="srow card-footer-row">
+                  <span class="token-tip">{{ lanCopiedTip || '手机端打开桥接 App 即自动发现本机，输入配对码完成一次配对' }}</span>
+                  <span class="srow-grow"></span>
+                  <span class="muted">数据仅在局域网内传输</span>
+                </div>
+                <div v-if="lanClientsText" class="srow card-footer-row">
+                  <span class="token-tip">已连接：{{ lanClientsText }}</span>
+                </div>
               </div>
             </div>
           </div>

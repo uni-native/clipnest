@@ -90,10 +90,14 @@ Jev 和一位国外博主的分享又给了我灵感。那位博主的名字我�
 
 ### 使用安装包
 
-正式构建会在 `release/` 中生成两个版本：
+当前正式版为 **0.1.1**，完整更新内容见 [更新日志](CHANGELOG.md)。安装文件可从 [GitHub Release](https://github.com/uni-native/clipnest/releases/tag/v0.1.1) 下载。
 
-- `PasteMan-Setup-0.1.0-x64.exe`：安装版，可选择安装目录并创建快捷方式。
-- `PasteMan-Portable-0.1.0-x64.exe`：便携版，无需安装即可运行。
+- `PasteMan-Setup-0.1.1-x64.exe`：安装版，可选择安装目录并创建快捷方式。
+- `PasteMan-Portable-0.1.1-x64.exe`：便携版，无需安装即可运行。
+- `PasteMan-Connector-1.0.7.zip`：Edge 与 Chrome 浏览器连接器，解压后手动加载。
+- `SHA256SUMS.txt`：下载文件完整性校验。
+
+构建默认输出到 `release2/`。升级前退出旧版应用；使用浏览器智能填充时，需同步更新连接器并刷新已打开的网页。已安装本地或测试版 0.1.1 的用户，需手动安装此次正式包。
 
 ### 从源码运行
 

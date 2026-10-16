@@ -22,6 +22,7 @@ import {
   regenerateToken,
   setBridgeConfig,
 } from '@main/bridge/server'
+import { registerLanIpc } from '@main/lan/server'
 import { createJevPipeline } from '@main/intelligence/jev'
 import { createHub, type IntelligenceHub } from '@main/intelligence/hub'
 import { bindModelsRoot, getDecisionBackend } from '@main/intelligence/onnx'
@@ -362,4 +363,6 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       return Promise.resolve(false)
     }
   })
+
+  registerLanIpc()
 }

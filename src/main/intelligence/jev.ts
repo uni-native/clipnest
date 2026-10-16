@@ -450,8 +450,8 @@ export function createJevPipeline(
       expect = await inferFieldTypeWithModel(modelMgr, field, page)
     }
     traceDecision(traceId, 'field-type', { expect, modelUsed: expect !== detectFieldType(field) })
-    if (expect === 'unknown') {
-      traceDecision(traceId, 'blocked-unknown-field')
+    if (expect === 'unknown' || expect === 'search') {
+      traceDecision(traceId, expect === 'search' ? 'blocked-search-field' : 'blocked-unknown-field')
       return { action: 'none' }
     }
     const typedValue = field.value.trim()
